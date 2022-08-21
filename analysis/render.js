@@ -1,40 +1,177 @@
 // Virtual DOM
-const VNode =  /** @class */ (function() {
-    function VNode(tag, data, children, text, elm, context, componentOptions, asyncFactory) {
-        this.tag = tag;
-        this.data = data;
-        this.children = children;
-        this.text = text;
-        this.elm = elm;
-        this.ns = undefined;
-        this.context = context;
-        this.fnContext = undefined;
-        this.fnOptions = undefined;
-        this.fnScopeId = undefined;
-        this.key = data && data.key;
-        this.componentOptions = componentOptions;
-        this.componentInstance = undefined;
-        this.parent = undefined;
-        this.raw = false;
-        this.isStatic = false;
-        this.isRootInsert = true;
-        this.isComment = false;
-        this.isCloned = false;
-        this.isOnce = false;
-        this.asyncFactory = asyncFactory;
-        this.asyncMeta = undefined;
-        this.isAsyncPlaceholder = false;
-    }
-    // DEPRECATED: alias for componentInstance for backwards compat.
-    /* istanbul ignore next */
-    Object.defineProperty(VNode.prototype, 'child', {
-        get() {
-            return this.componentInstance
-        },
-        enumerable: false,
-        configurable: true
-    });
+const VNode = /** @class */ (function () {
+  function VNode(
+    tag,
+    data,
+    children,
+    text,
+    elm,
+    context,
+    componentOptions,
+    asyncFactory
+  ) {
+    this.tag = tag;
+    this.data = data;
+    this.children = children;
+    this.text = text;
+    this.elm = elm;
+    this.ns = undefined;
+    this.context = context;
+    this.fnContext = undefined;
+    this.fnOptions = undefined;
+    this.fnScopeId = undefined;
+    this.key = data && data.key;
+    this.componentOptions = componentOptions;
+    this.componentInstance = undefined;
+    this.parent = undefined;
+    this.raw = false;
+    this.isStatic = false;
+    this.isRootInsert = true;
+    this.isComment = false;
+    this.isCloned = false;
+    this.isOnce = false;
+    this.asyncFactory = asyncFactory;
+    this.asyncMeta = undefined;
+    this.isAsyncPlaceholder = false;
+  }
+  // DEPRECATED: alias for componentInstance for backwards compat.
+  /* istanbul ignore next */
+  Object.defineProperty(VNode.prototype, "child", {
+    get() {
+      return this.componentInstance;
+    },
+    enumerable: false,
+    configurable: true,
+  });
 
-    return VNode;
+  return VNode;
 })();
 
+function createElement(
+  context,
+  tag,
+  data,
+  children,
+  normalizationType,
+  alwaysNormalize
+) {}
+function isPrimitive(v) {
+  return (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    // $flow-disable-line
+    typeof value === "symbol" ||
+    typeof value === "boolean"
+  );
+}
+const isArray = Array.isArray;
+function isUndef(v) {
+  return v === null || v === undefined;
+}
+function isDef(v) {
+  return v !== null && v !== undefined;
+}
+function isFlase(v) {
+  return v === false;
+}
+
+function isTextNode(node) {
+  return isDef(node) && isDef(node.text) && isFalse(node.isComment);
+}
+
+// The template compiler attempts to minimize the need for normalization by
+// statically analyzing the template at compile time.
+//
+// For plain HTML markup, normalization can be completely skipped because the
+// generated render function is guaranteed to return Array<VNode>. There are
+// two cases where extra normalization is needed:
+// 1. When the children contains components - because a functional component
+// may return an Array instead of a single root. In this case, just a simple
+// normalization is needed - if any child is an Array, we flatten the whole
+// thing with Array.prototype.concat. It is guaranteed to be only 1-level deep
+// because functional components already normalize their own children.
+function simpleNormalizeChildren(children) {
+  for (var i = 0; i < children.length; i++) {
+    if (isArray(children[i])) {
+      return Array.prototype.concat.apply([], children);
+    }
+  }
+  return children;
+}
+
+// 2. When the children contains constructs that always generated nested Arrays,
+// e.g. <template>, <slot>, v-for, or when the children is provided by user
+// with hand-written render functions / JSX. In such cases a full normalization
+// is needed to cater to all possible types of children values.
+function normalizeChildren(children) {
+  return isPrimitive(children)
+    ? [createTextVNode(children)]
+    : Array.isArray(children)
+    ? normalizeArrayChildren(children)
+    : undefined;
+}
+
+function flattenDeep(array, depth = 1) {
+  if (!isArray(array)) return array;
+  // return flat array
+  return depth > 0
+    ? array.reduce(
+        (accumulator, currentValue) =>
+          accumulator.concat(flattenDeep(currentValue, depth - 1)),
+        []
+      )
+    : array.slice();
+}
+
+function createTextVNode(val) {
+  return new VNode(undefined, undefined, undefined, String(val));
+}
+function normalizeArrayChildren(children, nestedIndex) {
+  const res = [];
+  let i, c, lastIndex, last;
+  for (i = 0; i < children.length; i++) {
+    c = children[i]; // grab child
+    if (isUndef(c) || typeof c === "boolean") continue;
+    lastIndex = res.length - 1;
+    last = res[lastIndex];
+    // nested
+    if (isArray(c)) {
+      if (c.length > 0) {
+        c = normalizeArrayChildren(c, `${nestedIndex}_${i}`);
+        // merge adjacent text nodes
+        if (isTextNode(c[0]) && isTextNode(last)) {
+          res[lastIndex] = createTextVNode(last.text + c[0].text);
+          c.shift();
+        }
+        res.push.apply(res, c);
+      }
+    } else if (isPrimitive(c)) {
+      if (isTextNode(last)) {
+        // merge adjacent text nodes
+        // this is necessary for SSR hydration because text nodes are
+        // essentially merged when rendered to HTML strings
+        res[lastIndex] = createTextVNode(last.text + c);
+      } else if (c !== "") {
+        // convert primitive to vnode
+        res.push(createTextVNode(c));
+      }
+    } else {
+      if (isTextNode(c) && isTextNode(last)) {
+        // merge adjacent text nodes
+        res[lastIndex] = createTextVNode(last.text + c.text);
+      } else {
+        // default key for nested array children (likely generated by v-for)
+        if (
+          isTrue(children._isVList) &&
+          isDef(c.tag) &&
+          isUndef(c.key) &&
+          isDef(nestedIndex)
+        ) {
+          c.key = `__vlist${nestedIndex}_${i}__`;
+        }
+        res.push(c);
+      }
+    }
+  }
+  return res;
+}
