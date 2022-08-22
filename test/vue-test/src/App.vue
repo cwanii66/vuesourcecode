@@ -1,5 +1,5 @@
 <template>
-  <div></div>
+  <div id="app"></div>
 </template>
 
 <script>
@@ -9,13 +9,7 @@ export default {
   components: {
   
   },
-  render: function(createElement) {
-    return createElement('div', {
-      attr: {
-        id: 'app'
-      },
-    }, this.message)
-  },
+
   data() {
     return {
       message: 'hello vue'

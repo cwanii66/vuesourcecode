@@ -11,6 +11,7 @@ function update(vnode, hydrating) {
 function /**@class */ Vue() {}
 Vue.prototype.__patch__ = (typeof window === undefined) ? noop : patch
 
+// 通过函数柯里化抹平差异，入参封装在闭包中处理，实际返回的patch函数是按需返回的
 export const patch = createPatchFunction({ nodeOps, modules })
 const hooks = ['create', 'acitvate', 'update', 'remove', 'destroy']
 function createPatchFunction(backend) {
