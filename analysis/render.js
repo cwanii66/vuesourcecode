@@ -74,7 +74,6 @@ function isDef(v) {
 function isFlase(v) {
   return v === false;
 }
-
 function isTextNode(node) {
   return isDef(node) && isDef(node.text) && isFalse(node.isComment);
 }
@@ -98,7 +97,6 @@ function simpleNormalizeChildren(children) {
   }
   return children;
 }
-
 // 2. When the children contains constructs that always generated nested Arrays,
 // e.g. <template>, <slot>, v-for, or when the children is provided by user
 // with hand-written render functions / JSX. In such cases a full normalization
@@ -110,7 +108,6 @@ function normalizeChildren(children) {
     ? normalizeArrayChildren(children)
     : undefined;
 }
-
 function flattenDeep(array, depth = 1) {
   if (!isArray(array)) return array;
   // return flat array
@@ -122,7 +119,6 @@ function flattenDeep(array, depth = 1) {
       )
     : array.slice();
 }
-
 function createTextVNode(val) {
   return new VNode(undefined, undefined, undefined, String(val));
 }
@@ -175,3 +171,4 @@ function normalizeArrayChildren(children, nestedIndex) {
   }
   return res;
 }
+

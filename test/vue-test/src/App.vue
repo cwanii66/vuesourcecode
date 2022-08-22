@@ -1,7 +1,5 @@
 <template>
-  <div id="app">
-    {{ message }}
-  </div>
+  <div></div>
 </template>
 
 <script>
@@ -10,6 +8,13 @@ export default {
   name: 'App',
   components: {
   
+  },
+  render: function(createElement) {
+    return createElement('div', {
+      attr: {
+        id: 'app'
+      },
+    }, this.message)
   },
   data() {
     return {
