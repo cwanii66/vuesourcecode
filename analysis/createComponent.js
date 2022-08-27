@@ -10,7 +10,7 @@ function createComponent(Ctor, data, context, children, tag) {
     installComponentHooks(data);
     
     const name = Ctor.options.name;
-    // 注意组件VNode的children为undefined，而componentOptions有children属性
+    // 注意组件VNode的children为undefined，而componentOptions有children(插槽会使用)
     const vnode = new VNode(
         `vue-component-${Ctor.cid}${name ? `-${name}` : ''}`,
         data, undefined, undefined, undefined, context,
