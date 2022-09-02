@@ -4,7 +4,7 @@ import Vue from 'vue'
 Vue.config.productionTip = false
 
 const childComp = {
-  template: '<div>{{ msg }}</div>',
+  render: h => h('div', { id: 'child' }, 'child component'),
   created() {
     console.log('child created');
   },
@@ -21,6 +21,11 @@ const childComp = {
 Vue.mixin({
   created() {
     console.log('parent created');
+  }
+})
+.mixin({
+  beforeCreate() {
+    console.log('before created')
   }
 })
 
