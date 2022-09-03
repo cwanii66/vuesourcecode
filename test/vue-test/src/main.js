@@ -3,7 +3,7 @@ import Vue from 'vue'
 
 Vue.config.productionTip = false
 
-const childComp = {
+const childComp = { // merge后为子类构造器的options
   render: h => h('div', { id: 'child' }, 'child component'),
   created() {
     console.log('child created');
@@ -16,18 +16,13 @@ const childComp = {
       msg: 'hello vue...'
     }
   }
-}
+} // 实例化子组件之前，在子组件的构造器内完成组件实例继承关系以及选项合并
 
 Vue.mixin({
   created() {
     console.log('parent created');
   }
-})
-.mixin({
-  beforeCreate() {
-    console.log('before created')
-  }
-})
+}) // 合并我们全局的options
 
 new Vue({
   el: '#app',
