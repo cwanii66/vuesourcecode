@@ -1,0 +1,6 @@
+class Dep {
+   constructor() {
+
+   }
+    
+}
