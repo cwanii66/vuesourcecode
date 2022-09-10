@@ -35,6 +35,9 @@ function mount(vnode, container) {
         // handle props
         if (vnode.props) {
             for(const [ key, value ] of Object.entries(vnode.props)) {
+                if (key.startsWith('on')) {
+                    el.addEventListener(key.slice(2).toLowerCase(), value)
+                }
                 el.setAttribute(key, value)
             }
         }
@@ -111,8 +114,8 @@ function patch(oldVnode, vnode) {
     }
 
 // reactivity
-let activeEffect;
-let targetMap = new WeakMap(); // 总之，WeakMap的专用场合就是，它的键所对应的对象，可能会在将来消失。
+let activeEffect
+let targetMap = new WeakMap() // 总之，WeakMap的专用场合就是，它的键所对应的对象，可能会在将来消失。
 // WeakMap结构有助于防止内存泄漏
 const handler = {
   get(target, propKey, receiver) {
@@ -161,6 +164,34 @@ function whenDepsChange(effect) {
   _effect();
 }
 
+const App = {
+    data: myReactive({
+        count: 0
+    }),
+
+    render() {
+        return h('div', {
+            onClick: () => this.data.count++
+        }, String(this.data.count))
+    }
+}
+
+function createApp(component, container) {
+    let isMounted = false
+    let prevVdom
+    whenDepsChange(() => {
+        if (!isMounted) {
+            prevVdom = component.render()
+            mount(prevVdom, container)
+            isMounted = true
+        } else {
+            const newVdom = component.render()
+            patch(prevVdom, newVdom)
+            preVdom = newVdom
+        }
+    })
+}
+createApp(App, document.querySelector('#app'))
 </script>
 </body>
 </html>
