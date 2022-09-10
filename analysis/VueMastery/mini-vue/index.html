@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+</head>
+
+<style>
+    .red { color: red }
+    .green { color: green }
+</style>
+<body>
+    <div id="app"></div>
+
+<script>
+const VNode = (function() {
+        function VNode(tag, props, children) {
+            this.tag = tag
+            this.props = props
+            this.children = children
+            this.el = null
+        }
+        return VNode
+    })()
+// VDOM
+function h(tag, props, children) { // render a vnode
+        return new VNode(tag, props, children)
+    }
+function mount(vnode, container) {
+        const el = document.createElement(vnode.tag)
+        vnode.el = el
+        // handle props
+        if (vnode.props) {
+            for(const [ key, value ] of Object.entries(vnode.props)) {
+                el.setAttribute(key, value)
+            }
+        }
+        // handle children
+        if (vnode.children) {
+            if (typeof vnode.children === 'string') {
+                    const textContent = document.createTextNode(vnode.children)
+                    el.appendChild(textContent)
+            } else {
+                vnode.children.forEach(child => {
+                    mount(child, el)
+                })
+            }
+        }
+        container.appendChild(el)
+    }
+function patch(oldVnode, vnode) {
+        const el = vnode.el = oldVnode.el
+        if (oldVnode.tag === vnode.tag) {
+            // props
+            const oldProps = oldVnode.props || {}
+            const newProps = vnode.props || {}
+            for (const key in newProps) {
+                const oldValue = oldProps[key]
+                const newValue = newProps[key]
+                if (newValue !== oldValue) {
+                    el.setAttribute(key, newValue)
+                }
+            }
+            for (const key in oldProps) {
+                if (!(key in newProps)) {
+                    el.removeAttribute(key)
+                }
+            }
+
+            // children
+            const oldChildren = oldVnode.children
+            const newChildren = vnode.children
+            if (typeof newChildren === 'string') {
+                if (typeof oldChildren === 'string') {
+                    if (newChildren !== oldChildren) {
+                        el.textContent = newChildren
+                    }
+                } else {
+                    el.textContent = newChildren
+                }
+            } else {
+                if (typeof oldCHildren === 'string') {
+                    el.innerHTML = ''
+                    newChildren.forEach(child => {
+                        mount(child, el)
+                    })
+                } else {
+                    // both new and old are array
+                    const commonLength = Math.min(oldChildren.length, newChildren.length)
+                    for (let i = 0; i < commonLength; i++) {
+                        patch(oldChildren[i], newChildren[i])
+                    }
+                    if (newChildren.length > oldChildren.length) {
+                        newChildren.slice(oldChildren.length).forEach(child => {
+                            mount(child, el)
+                        })
+                    } else if (newChildren.length < oldChildren.length) {
+                        oldChildren.slice(newChildren.length).forEach(child => {
+                            el.removeChild(child.el)
+                        })
+                    }
+                }
+            }
+            
+        } else {
+            // node replacement
+        }
+    }
+
+// reactivity
+let activeEffect;
+let targetMap = new WeakMap(); // 总之，WeakMap的专用场合就是，它的键所对应的对象，可能会在将来消失。
+// WeakMap结构有助于防止内存泄漏
+const handler = {
+  get(target, propKey, receiver) {
+    track.call(receiver, target, propKey);
+    return Reflect.get(target, propKey, receiver);
+  },
+  set(target, propKey, value, receiver) {
+    const result = Reflect.set(target, propKey, value, receiver);
+    trigger.call(receiver, target, propKey);
+    return result;
+  },
+};
+function myReactive(obj) {
+  const proxyObj = new Proxy(obj, handler);
+  return proxyObj;
+}
+function getReactiveProperty(target, key) {
+  let depsMap = targetMap.get(target);
+  if (!depsMap) {
+    depsMap = new Map();
+    targetMap.set(target, depsMap);
+  }
+  let deps = depsMap.get(key);
+  if (!deps) {
+    deps = new Set();
+    depsMap.set(key, deps);
+  }
+  return deps;
+}
+function track(target, key) {
+  if (activeEffect) {
+    const effects = getReactiveProperty(target, key);
+    effects.add(activeEffect);
+  }
+}
+function trigger(target, key) {
+  const effects = getReactiveProperty(target, key);
+  effects.forEach((effect) => effect());
+}
+function whenDepsChange(effect) {
+  const _effect = () => {
+    activeEffect = _effect;
+    effect();
+    activeEffect = null;
+  };
+  _effect();
+}
+
+</script>
+</body>
+</html>

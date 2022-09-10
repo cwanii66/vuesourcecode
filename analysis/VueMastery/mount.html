@@ -37,26 +37,25 @@ function mount(vnode, container) {
                 mount(child, el);
             });
         }
-
     }
     container.appendChild(el);
 }
 const vdom = h('div', { id: '' }, [ 
     h('span', { class: 'span' }, 'hello')
-]);
-mount(vdom, document.querySelector('#app'));
+])
+mount(vdom, document.querySelector('#app'))
 
 function patch(oldVnode, vnode) {
     const el = oldVnode.el;
     if (oldVnode.tag === vnode.tag) {
         // props
-        const oldProps = oldVnode.props || {};
-        const newProps = vnode.props || {};
+        const oldProps = oldVnode.props || {}
+        const newProps = vnode.props || {}
         for (const key in newProps) {
-            const oldValue = oldValue[key];
-            const newValue = newValue[key];
+            const oldValue = oldValue[key]
+            const newValue = newValue[key]
             if (newValue !== oldValue) {
-                el.setAttribute(key, newValue);
+                el.setAttribute(key, newValue)
             }
         }
     } else {
@@ -67,9 +66,9 @@ function patch(oldVnode, vnode) {
 
 const newVdom = h('div', { class: 'new-div' }, [
     h('span', null, 'changed!')
-]);
+])
 
-patch(vdom, newVdom);
+patch(vdom, newVdom)
 </script>
 </body>
 </html>
