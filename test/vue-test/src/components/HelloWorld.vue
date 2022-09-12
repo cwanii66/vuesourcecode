@@ -1,6 +1,6 @@
 <template>
   <div id="hello-world">
-    <h2> {{ msg }} </h2>
+    <h2> {{ nested.msg }} </h2>
   </div>
 </template>
 
@@ -10,7 +10,9 @@ export default {
     components: {},
     data() {
         return {
-            msg: 'hello world'
+            nested: {
+              msg: 'welcome to our vue.js app'
+            }
         }
     }
 }
