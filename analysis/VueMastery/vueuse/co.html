@@ -11,15 +11,16 @@
     
 <script src="https://unpkg.com/vue@3"></script>
 <script>
-const { createApp, ref, watchEffect, reactive, defineProps } = Vue
+const { createApp, h, ref } = Vue
 
 
 createApp({
     props: ['title'],
     setup(props) {
-        
-    }
-})
+        const count = ref('abc')
+        return () => h('div', count.value)
+    },
+}).mount('#app')
 </script>
 </body>
 </html>
