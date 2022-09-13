@@ -1,27 +1,40 @@
 <template>
   <div id="app">
-    <h1 @click="changeMsg"> {{ message }} </h1>
-    <HelloWorld />
+    <h1> {{ message }} </h1>
+    <div v-if="flag">
+      {{ msg1 }}
+    </div>
+    <div v-else> {{ msg2 }} </div>
+    <button @click="change">change</button>
+    <button @click="toggle">toggle</button>
+    <!-- <HelloWorld /> -->
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue';
+// import HelloWorld from './components/HelloWorld.vue';
 
 export default {
   name: 'App',
   components: {
-    HelloWorld,
+    // HelloWorld,
   },
 
   data() {
     return {
-      message: 'hello vue'
+      message: 'hello vue',
+      flag: true,
+      msg1: 'message-01',
+      msg2: 'message-02'
     }
   },
   methods: {
-    changeMsg() {
-      this.message = 'hello vue3'
+    change() {
+      this.msg1 = 'message-01 changed' + Math.random()
+    },
+    toggle() {
+      this.flag = false
+      this.msg2 = 'message-02 changed' + Math.random()
     }
   }
 }

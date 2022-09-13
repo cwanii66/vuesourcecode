@@ -109,3 +109,4 @@ function def(value, key, ctx, enumerable) {
         configurable: true
     })
 }
+
