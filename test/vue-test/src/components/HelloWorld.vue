@@ -11,7 +11,7 @@ export default {
     data() {
         return {
             nested: {
-              msg: 'welcome to our vue.js app'
+              msg: 'welcome to our vue.js app',
             }
         }
     }
