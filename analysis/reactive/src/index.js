@@ -1,7 +1,48 @@
 class Watcher {
+  constructor(vm, getter) {
+    this.vm = vm
+    this.getter = getter
 
+    // this.deps = new Set()
+    // this.newDeps = new Set()
+    // this.depsId = []
+    // this.newDepsId = []
+  }
   addDep(dep) {}
+  update() {
+    queueWatcher(this) // establish queue for watchers --> one-time use
+  }
 }
+function nextTick(cb) {
+
+}
+function flushSchedulerQueue() {
+
+}
+const queueWatcher = (function(global) {
+  let flushing = false
+  let waiting = false
+  let index
+  const _watchersQueue = []
+  return function queueWatcher(watcher) {
+    if (!flushing) _watchersQueue.push(watcher)
+
+    if (flushing) {
+      let i = _watchersQueue.length - 1
+      while(i > index && _watchersQueue[i].id > watcher.id) {
+        i--
+      }
+      _watchersQueue.splice(i + 1, 0, watcher)
+    }
+
+    // queue the flush
+    if (waiting) {
+      waiting = true
+      nextTick(flushSchedulerQueue)
+    }
+  }
+})(globalThis)
+
 
 /**
  * A dep is an observable that can have multiple
@@ -18,8 +59,12 @@ class Dep {
     removeSub(sub) {
         
     }
-    notify() {
-
+    notify(info) {
+      // stabilize the subscriber list first
+      const _subs = this.subs.slice()
+      for (let i = 0, sub; sub = _subs[i++]; ) {
+        sub.update() // 
+      }
     }
     depend(info) {
       if (Dep.target) {
@@ -81,12 +126,13 @@ function defineReactive(obj, key, val) {
     if (!getter || setter) {
       val = obj[key]
     }
+    const value = getter ? getter.call(obj) : val
     // cater for pre-defined getter/setters
     Object.defineProperty(obj, key, {
         enumerable: true,
         configurable: true,
         get: function reactiveGetter() {
-          const value = getter ? getter.call(obj) : val
+          // const value = getter ? getter.call(obj) : val
           if (Dep.target) { // has watcher?
             dep.depend()
           }
@@ -94,7 +140,14 @@ function defineReactive(obj, key, val) {
           return value
         },
         set: function reactiveSetter(newVal) {
-
+          // const value = getter ? getter.call(obj) : val
+          if (newVal === value) return
+          if (setter) {
+            setter.call(obj, newVal)
+          } else {
+            val = newVal
+          }
+          dep.notify()
         }
     })
 
