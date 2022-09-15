@@ -12,27 +12,42 @@ class Watcher {
   update() {
     queueWatcher(this) // establish queue for watchers --> one-time use
   }
+  run() {
+    
+  }
 }
 function nextTick(cb) {
 
 }
+let flushing = false
+let waiting = false
+let index
+const queue = []
+// iterate queue and execute
 function flushSchedulerQueue() {
+  flush = true
+  let watcher, id
 
+  queue.sort((prev, cur) => prev.id - cur.id) // ascending
+  
+  for (index = 0; index < queue.length; index++) {
+    watcher = queue[index]
+    id = watcher.id
+
+    watcher.run()
+  }
 }
-const queueWatcher = (function(global) {
-  let flushing = false
-  let waiting = false
-  let index
-  const _watchersQueue = []
-  return function queueWatcher(watcher) {
-    if (!flushing) _watchersQueue.push(watcher)
-
-    if (flushing) {
-      let i = _watchersQueue.length - 1
-      while(i > index && _watchersQueue[i].id > watcher.id) {
+function queueWatcher(watcher) {
+    if (!flushing) {
+      queue.push(watcher)
+    } else {
+      // if already flushing, splice the watcher based on its id
+      // if already past its id, it will be run next immediately
+      let i = queue.length - 1
+      while(i > index && queue[i].id > watcher.id) {
         i--
       }
-      _watchersQueue.splice(i + 1, 0, watcher)
+      queue.splice(i + 1, 0, watcher)
     }
 
     // queue the flush
@@ -40,8 +55,7 @@ const queueWatcher = (function(global) {
       waiting = true
       nextTick(flushSchedulerQueue)
     }
-  }
-})(globalThis)
+}
 
 
 /**

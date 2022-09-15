@@ -1,10 +1,10 @@
 <template>
   <div id="app">
-    <h1> {{ message }} </h1>
+    <h1> {{ msg }} </h1>
     <div v-if="flag">
-      {{ msg1 }}
+      {{ msg }}
     </div>
-    <div v-else> {{ msg2 }} </div>
+    <div v-else> {{ msg1 }} </div>
     <button @click="change">change</button>
     <button @click="toggle">toggle</button>
     <!-- <HelloWorld /> -->
@@ -22,19 +22,23 @@ export default {
 
   data() {
     return {
-      message: 'hello vue',
+      msg: 'hello vue',
       flag: true,
       msg1: 'message-01',
-      msg2: 'message-02'
     }
   },
   methods: {
     change() {
-      this.msg1 = 'message-01 changed' + Math.random()
+      this.msg = Math.random()
     },
     toggle() {
-      this.flag = false
-      this.msg2 = 'message-02 changed' + Math.random()
+      this.flag = !this.flag
+    }
+  },
+  watch: {
+    msg(msg, oldMsg) {
+      this.msg = Math.random()
+      console.log(msg, oldMsg)
     }
   }
 }
