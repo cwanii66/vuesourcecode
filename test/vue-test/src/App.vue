@@ -1,6 +1,9 @@
 <template>
   <div id="app">
-    <h1> {{ msg }} </h1>
+    <!-- <h1> {{ msg }} </h1> -->
+    <div ref="msg">
+      {{ msg }}
+    </div>
     <div v-if="flag">
       {{ msg }}
     </div>
@@ -28,8 +31,17 @@ export default {
     }
   },
   methods: {
-    change() {
+    async change() {
       this.msg = Math.random()
+      console.log('sync: ', this.$refs.msg.innerText)
+      this.$nextTick(() => {
+        console.log('nextTick: ', this.$refs.msg.innerText)
+      })
+      this.$nextTick().then(() => {
+        console.log('nextTick without cb: ', this.$refs.msg.innerText)
+      })
+      await this.$nextTick()
+      console.log('nextTick async/await: ', this.$refs.msg.innerText)
     },
     toggle() {
       this.flag = !this.flag
