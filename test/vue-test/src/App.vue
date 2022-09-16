@@ -35,12 +35,6 @@ export default {
       this.flag = !this.flag
     }
   },
-  watch: {
-    msg(msg, oldMsg) {
-      this.msg = Math.random()
-      console.log(msg, oldMsg)
-    }
-  }
 }
 </script>
 
