@@ -1,15 +1,15 @@
 <template>
   <div id="app">
     <!-- <h1> {{ msg }} </h1> -->
-    <div ref="msg">
+    <div>
       {{ msg }}
     </div>
-    <div v-if="flag">
-      {{ msg }}
+    <div>
+      {{ items }}
     </div>
-    <div v-else> {{ msg1 }} </div>
+    <!-- <div v-else> {{ msg1 }} </div> -->
     <button @click="change">change</button>
-    <button @click="toggle">toggle</button>
+    <!-- <button @click="toggle">toggle</button> -->
     <!-- <HelloWorld /> -->
   </div>
 </template>
@@ -25,23 +25,18 @@ export default {
 
   data() {
     return {
-      msg: 'hello vue',
+      msg: {
+        a: 'hello',
+      },
       flag: true,
       msg1: 'message-01',
+      items: [1, 2, 3]
     }
   },
   methods: {
-    async change() {
-      this.msg = Math.random()
-      console.log('sync: ', this.$refs.msg.innerText)
-      this.$nextTick(() => {
-        console.log('nextTick: ', this.$refs.msg.innerText)
-      })
-      this.$nextTick().then(() => {
-        console.log('nextTick without cb: ', this.$refs.msg.innerText)
-      })
-      await this.$nextTick()
-      console.log('nextTick async/await: ', this.$refs.msg.innerText)
+    change() {
+      this.$set(this.msg, 'b', 'jack')
+      this.items.splice(this.items.length, 0, 4)
     },
     toggle() {
       this.flag = !this.flag

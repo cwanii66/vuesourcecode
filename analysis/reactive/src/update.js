@@ -15,6 +15,7 @@
 const callbacks = []
 let pending = false
 
+// Promise.resolve().then(flushCallbacks)
 function flushCallbacks() {
     pending = false
     const copies = callbacks.slice(0)
@@ -22,7 +23,6 @@ function flushCallbacks() {
     for (let i = 0, cb; cb = copies[i++]; ){
         cb()
     }
-
 }
 
 let microTimerFunc 
