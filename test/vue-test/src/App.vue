@@ -7,6 +7,12 @@
     <div>
       {{ items }}
     </div>
+    <div>
+      {{ msg1 }}
+    </div>
+    <ul>
+      <li v-for="(item, index) in items" :key="index">number: {{ item }}</li>
+    </ul>
     <!-- <div v-else> {{ msg1 }} </div> -->
     <button @click="change">change</button>
     <!-- <button @click="toggle">toggle</button> -->
@@ -18,7 +24,7 @@
 // import HelloWorld from './components/HelloWorld.vue';
 
 export default {
-  name: 'App',
+  name: "App",
   components: {
     // HelloWorld,
   },
@@ -26,23 +32,30 @@ export default {
   data() {
     return {
       msg: {
-        a: 'hello',
+        a: "hello",
       },
       flag: true,
-      msg1: 'message-01',
-      items: [1, 2, 3]
-    }
+      msg1: "message-01",
+      items: [1, 2, 3],
+    };
   },
   methods: {
     change() {
-      this.$set(this.msg, 'b', 'jack')
-      this.items.splice(this.items.length, 0, 4)
+      this.msg1 = "message changed";
     },
     toggle() {
-      this.flag = !this.flag
-    }
+      this.flag = !this.flag;
+    },
   },
-}
+  watch: {
+    msg1(value, oldValue) {
+      console.log(value, oldValue);
+    },
+  },
+  computed: {
+    msg1WithTail: () => this.msg1 += '---tail'
+  }
+};
 </script>
 
 <style>
