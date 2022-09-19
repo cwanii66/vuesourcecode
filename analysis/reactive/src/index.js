@@ -10,11 +10,26 @@ class Watcher {
   }
   addDep(dep) {}
   update() {
+    if (this.computed) {
+      this.getAndInvoke(() => {
+        this.dep.notify()
+      })
+    }
     queueWatcher(this) // establish queue for watchers --> one-time use
   }
   run() {
     
   }
+  get() {}
+  getAndInvoke(cb) {
+    const value = this.get()
+    if (value !== this.value) {
+      const oldValue = this.value
+      this.value = value
+      cb.call(this.vm, value, oldValue)
+    }
+  }
+
 }
 function nextTick(cb) {
 

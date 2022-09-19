@@ -1,8 +1,6 @@
 <template>
   <div id="app">
-    <!-- <h1> {{ msg }} </h1> -->
-    <div> {{ msg1 }} </div>
-    <div> {{ msg1WithTail }} </div>
+    <h1> {{ name }} </h1>
     <button @click="change"> change </button>
     <!-- <button @click="toggle">toggle</button> -->
     <!-- <HelloWorld /> -->
@@ -20,26 +18,26 @@ export default {
 
   data() {
     return {
-      msg: {
-        a: "hello",
-      },
-      flag: true,
-      msg1: "message-01",
+      firstName: 'chris',
+      lastName: 'wong',
+      useless: 0
     };
   },
   methods: {
     change() {
-      this.msg1 = "message changed";
+      this.useless++
     },
-    toggle() {
-      this.flag = !this.flag;
+    changeLast() {
+      this.lastName = 'hang'
     },
-  },
-  watch: {
-
   },
   computed: {
-    msg1WithTail() { return this.msg1 + '--tail' }
+    name() {
+      if (this.useless > 0) {
+        return this.firstName + ' ' + this.lastName
+      }
+      return 'please click change button'
+    }
   }
 };
 </script>
