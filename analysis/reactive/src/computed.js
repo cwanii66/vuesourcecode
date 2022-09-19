@@ -38,3 +38,18 @@ function createComputedGetter(key) {
         }
     }
 }
+
+function initComputed(vm, computed) {
+    // simply achieve init
+    const watchers = Object.create(null)
+
+    for (const key in computed) {
+        const userDef = computed[key]
+        const getter = typeof userDef === 'function' ? userDef : userDef.get
+        watchers[key] = new Watcher(vm, getter)
+
+        if (!(key in vm)) {
+            defineComputed(vm, key, userDef)
+        }
+    }
+}

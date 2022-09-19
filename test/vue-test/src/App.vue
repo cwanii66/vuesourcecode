@@ -1,20 +1,9 @@
 <template>
   <div id="app">
     <!-- <h1> {{ msg }} </h1> -->
-    <div>
-      {{ msg }}
-    </div>
-    <div>
-      {{ items }}
-    </div>
-    <div>
-      {{ msg1 }}
-    </div>
-    <ul>
-      <li v-for="(item, index) in items" :key="index">number: {{ item }}</li>
-    </ul>
-    <!-- <div v-else> {{ msg1 }} </div> -->
-    <button @click="change">change</button>
+    <div> {{ msg1 }} </div>
+    <div> {{ msg1WithTail }} </div>
+    <button @click="change"> change </button>
     <!-- <button @click="toggle">toggle</button> -->
     <!-- <HelloWorld /> -->
   </div>
@@ -36,7 +25,6 @@ export default {
       },
       flag: true,
       msg1: "message-01",
-      items: [1, 2, 3],
     };
   },
   methods: {
@@ -48,12 +36,10 @@ export default {
     },
   },
   watch: {
-    msg1(value, oldValue) {
-      console.log(value, oldValue);
-    },
+
   },
   computed: {
-    msg1WithTail: () => this.msg1 += '---tail'
+    msg1WithTail() { return this.msg1 + '--tail' }
   }
 };
 </script>
