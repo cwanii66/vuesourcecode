@@ -32,9 +32,21 @@ function createGetterInvoker(getter) {
 function createComputedGetter(key) {
     return function computedGetter() {
         const watcher = this._computedWatchers && this._computedWatchers[key]
+        // if (watcher) {
+        //     watcher.depend()
+        //     return watcher.evaluate()
+        // }
         if (watcher) {
-            watcher.depend()
-            return watcher.evaluate()
+            if (watcher.dirty) {
+                watcher.evaluate() 
+                    // get value first -> at computed watcher getter -> immediately return after callback computed
+                    
+            }
+            if (Dep.target) {
+                Dep.target.onTrack({/** config  */})
+
+                Dep.target.depend() // current render watcher collect computed as deps
+            }
         }
     }
 }
