@@ -26,14 +26,20 @@ export default {
       firstName: 'chris',
       lastName: 'wong',
       useless: 0,
+      nested: {
+        a: {
+          b: 1
+        }
+      },
 
       question: '',
-      answer: 'I cannot give you an answer until you ask a question!'
+      answer: 'I cannot give you an answer until you ask a question!',
     };
   },
   methods: {
     change() {
       this.useless++
+      this.nested.a.b++
     },
     changeLast() {
       this.lastName = 'hang'
@@ -52,7 +58,7 @@ export default {
   },
   created() {
     this.debouncedGetAnswer = debounce(this.getAnswer, 500)
-  },  
+  },
   computed: {
     name() {
       if (this.useless > 0) {
@@ -65,6 +71,18 @@ export default {
     question() {
       this.answer = 'Waiting for you to stop typing...'
       this.debouncedGetAnswer()
+    },
+    nested: {
+      deep: true,
+      handler(newVal) {
+        console.log('nested: ', newVal.a.b)
+      }
+    },
+    answer: {
+      immediate: true,
+      handler(value, oldValue = 'initial render') {
+        console.log(this.answer, value, oldValue)
+      }
     }
   }
 };
