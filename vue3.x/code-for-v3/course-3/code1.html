@@ -1,0 +1,57 @@
+<body></body>
+
+<script>
+function renderer(vnode, container) {
+    if (typeof vnode.tag === 'object') {
+        mountComponent(vnode, container)
+    } else if (typeof vnode.tag === 'string') {
+        mountElement(vnode, container)
+    }
+}
+
+function mountElement(vnode, container) {
+    const el = vnode.tag
+        ? document.createElement(vnode.tag)
+        : document.createTextNode(vnode) // if it's not vnode, we assume that is a text node
+    // props
+    for (const key in vnode.props) {
+        // handle event starts with on
+        if (key.startsWith('on')) {
+            el.addEventListener(
+                key.slice(2).toLowerCase(), 
+                vnode.props[key]
+            )
+        }
+    }
+    // children
+    if (typeof vnode.children === 'string') {
+        // text node
+        el.textContent = vnode.children
+    } else if (Array.isArray(vnode.children)) {
+        vnode.children.forEach(child => renderer(child, el))
+    }
+    container.appendChild(el)
+}
+function mountComponent(vnode, container) {
+    const subtree = vnode.tag.render() // get component subtree
+    renderer(subtree, container)
+}
+
+const MyComp = {
+    render() {
+        return {
+            tag: 'div',
+            props: {
+                onClick: () => console.log('hello')
+            },
+            children: 'click me'
+        }
+    }
+}
+
+const vnode = {
+    tag: MyComp
+}
+renderer(vnode, document.body)
+
+</script>

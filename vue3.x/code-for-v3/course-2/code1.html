@@ -2,5 +2,7 @@
 
 <script src="https://unpkg.com/vue@next"></script>
 <script>
+    const { createApp } = Vue // -iife source
 
+    createApp({ render: () => null }).mount("#doesn't-exist") // get a beautiful warning
 </script>
