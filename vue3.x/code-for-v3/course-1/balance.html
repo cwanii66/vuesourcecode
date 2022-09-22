@@ -1,0 +1,36 @@
+<body></body>
+
+<script>
+function mount(vnode, container) {
+    const el = document.createElement(vnode.tag)
+    // props
+    const props = vnode.props
+    for (const key in props) {
+        const value = props[key]
+        el.setAttribute(key, value)
+    }
+
+    // children
+    if (typeof vnode.children === 'string') {
+        const txt = document.createTextNode(vnode.children)
+        el.appendChild(txt)
+    } else if (vnode.children) {
+        // recursively call the current mount fn
+        vnode.children.forEach(child => mount(child, el))
+    }
+    container.appendChild(el)
+}
+const h = function(tag, props, children) {
+    return {
+        tag,
+        props,
+        children
+    }
+}
+
+const vnode = h('div', { style: 'color: red' }, [
+    h('span', null, 'hello vue')
+])
+
+mount(vnode, document.body)
+</script>
