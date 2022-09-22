@@ -1,6 +1,7 @@
 <body></body>
 
 <script>
+// generally, we regard function of renderer as (patch & render function)
 function renderer(vnode, container) {
     if (typeof vnode.tag === 'function') {
         mountComponent(vnode, container)
@@ -37,6 +38,7 @@ function mountComponent(vnode, container) {
     renderer(subtree, container)
 }
 
+// usually user interface
 const MyComp = function() {
     return {
         tag: 'div',
