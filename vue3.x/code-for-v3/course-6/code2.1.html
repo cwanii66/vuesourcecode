@@ -157,10 +157,15 @@
   function traverseNode(ast, ctx) {
     // 设置当前转换的节点信息: ctx.currentNode
     ctx.currentNode = ast
-
+    // 1. 增加退出阶段的回调函数数组
+    const exitFns = []
     const transforms = ctx.nodeTransforms
     for (let i = 0, transformFn; transformFn = transforms[i++]; ) {
-      transformFn(ctx.currentNode, ctx)
+      // 2. 转换函数可以返回另一个函数
+      const onExit = transformFn(ctx.currentNode, ctx)
+      if (onExit) {
+        exitFns.push(onExit)
+      }
       // 任何转换函数都有可能移除当前节点，因此每个转换函数执行完后需要检查当前节点是否被移除
       if (!ctx.currentNode) return
     }
@@ -176,11 +181,18 @@
         traverseNode(children[i], ctx)
       }
     }
+    let i = exitFns.length
+    while(i--) {
+      exitFns[i]()
+    }
   }
 
   function transformElement(node, ctx) {
     if (node.type === 'Element' && node.tag === 'p') {
       node.tag = 'h1'
+    }
+    return () => {
+      console.log(`${node.tag ? node.tag : node.content ? 'Text' : 'Root'} exit`)
     }
   }
   function transformText(node, ctx) {
@@ -190,6 +202,9 @@
       //   tag: 'span',
       // })
       // ctx.removeNode()
+    }
+    return () => {
+      console.log(`${node.tag ? node.tag : node.content ? 'Text' : 'Root'} exit`)
     }
   }
 
