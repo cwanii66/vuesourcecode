@@ -188,12 +188,11 @@
   }
 
   function transformElement(node, ctx) {
-    if (node.type === 'Element' && node.tag === 'p') {
-      node.tag = 'h1'
-    }
-    return () => {
-      console.log(`${node.tag ? node.tag : node.content ? 'Text' : 'Root'} exit`)
-    }
+    // if (node.type === 'Element' && node.tag === 'p') {
+    //   node.tag = 'h1'
+    // }
+    // return () => {
+    // }
   }
   function transformText(node, ctx) {
     if (node.type === 'Text') {
@@ -204,7 +203,7 @@
       // ctx.removeNode()
     }
     return () => {
-      console.log(`${node.tag ? node.tag : node.content ? 'Text' : 'Root'} exit`)
+      console.log(`exit: ${JSON.stringify(node)}`)
     }
   }
 
