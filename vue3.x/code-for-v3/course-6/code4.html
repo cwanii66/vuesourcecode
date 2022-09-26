@@ -175,144 +175,188 @@
           context.currentNode = null;
         }
       },
-      nodeTransforms: [
-        transformRoot, 
-        transformElement,
-        transformText
-      ],
+      nodeTransforms: [transformRoot, transformElement, transformText],
     };
     // 调用 traverseNode 完成转换
     traverseNode(ast, context);
   }
 
-  // data model for render function
-  const FunctionDeclNode = {
-    type: 'FunctionDecl',
-    id: {
-      type: 'identifier',
-      name: 'render'
-    },
-    params: [],
-    body: [
-      {
-        type: 'ReturnStatement',
-        return: {
-          type: 'CallExpression',
-          callee: {
-            type: 'identifier',
-            name: 'h'
-          },
-          arguments: [
-            {
-              type: 'StringLiteral',
-              value: 'div'
-            },
-            {
-              type: 'ArrayExpression',
-              elements: [
-                {
-                  type: 'CallExpression',
-                  callee: {
-                    type: 'identifier',
-                    name: 'h'
-                  },
-                  arguments: [
-                    { type: 'StringLiteral', value: 'p' },
-                    { type: 'StringLiteral', value: 'Vue' },
-                  ],
-                },
-                {
-                  type: 'CallExpression',
-                  callee: {
-                    type: 'identifier',
-                    name: 'h'
-                  },
-                  arguments: [
-                    { type: 'StringLiteral', value: 'p' },
-                    { type: 'StringLiteral', value: 'Vue' }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      }
-    ]
-  }
-
   // =============================== AST 工具函数 ===============================
+
   function createStringLiteral(value) {
     return {
-      type: 'StringLiteral',
-      value
-    }
+      type: "StringLiteral",
+      value,
+    };
   }
+
   function createIdentifier(name) {
     return {
-      type: 'identifier',
-      name
-    }
+      type: "Identifier",
+      name,
+    };
   }
+
   function createArrayExpression(elements) {
     return {
-      type: 'ArrayLiteral',
-      elements
-    }
+      type: "ArrayExpression",
+      elements,
+    };
   }
+
   function createCallExpression(callee, arguments) {
     return {
-      type: 'CallExpression',
+      type: "CallExpression",
       callee: createIdentifier(callee),
-      arguments
-    }
+      arguments,
+    };
   }
 
   // =============================== AST 工具函数 ===============================
 
-  function transformElement(node) {
-    // onExit: 保证该节点的子节点全部被处理完成
-    return () => {
-      if (node.type !== 'Element') return
-      const CallExp = createCallExpression('h', [
-        createStringLiteral(node.tag)
-      ])
-
-      node.children.length === 1
-        ? CallExp.arguments.push(node.children[0].jsNode)
-        : CallExp.arguments.push(
-          createArrayExpression(node.children.map(c => c.jsNode))
-        )
-      
-      node.jsNode = CallExp
-    }
-  }
   function transformText(node) {
-    if (node.type !== 'Text') return
-    node.jsNode = createStringLiteral(node.content)
+    if (node.type !== "Text") {
+      return;
+    }
+
+    node.jsNode = createStringLiteral(node.content);
   }
-  function transformRoot(node) {
-    
+
+  function transformElement(node) {
     return () => {
-      if (node.type !== 'Root') return
-      const vnodeJSAST = node.children[0].jsNode
+      if (node.type !== "Element") {
+        return;
+      }
+
+      const callExp = createCallExpression("h", [
+        createStringLiteral(node.tag),
+      ]);
+      node.children.length === 1
+        ? callExp.arguments.push(node.children[0].jsNode)
+        : callExp.arguments.push(
+            createArrayExpression(node.children.map((c) => c.jsNode))
+          );
+
+      node.jsNode = callExp;
+    };
+  }
+
+  function transformRoot(node) {
+    return () => {
+      if (node.type !== "Root") {
+        return;
+      }
+
+      const vnodeJSAST = node.children[0].jsNode;
+
       node.jsNode = {
-        type: 'FunctionDecl',
-        id: {
-          type: 'identifier',
-          name: 'render'
-        },
+        type: "FunctionDecl",
+        id: { type: "Identifier", name: "render" },
         params: [],
         body: [
           {
-            type: 'ReturnStatement',
-            return: vnodeJSAST
-          }
-        ]
+            type: "ReturnStatement",
+            return: vnodeJSAST,
+          },
+        ],
+      };
+    };
+  }
+
+  const ast = parse(`<div><p>Vue</p><p>Template</p></div>`);
+  transform(ast);
+
+  console.log(ast);
+
+  console.log(generate(ast.jsNode))
+  // ============================ code generate ============================
+  function generate(node) {
+    const ctx = {
+      code: '',
+      push(code) {
+        ctx.code += code
+      },
+      currentIndent: 0,
+      newline() {
+        ctx.code += '\n' + ` `.repeat(ctx.currentIndent)
+      },
+      indent() {
+        ctx.currentIndent++
+        ctx.newline()
+      },
+      deIndent() {
+        ctx.currentIndent--
+        ctx.newline()
       }
+    }
+    genNode(node, ctx)
+
+    return ctx.code
+  }
+  function genNode(node, context) {
+    switch(node.type) {
+      case 'FunctionDecl':
+        genFunctionDecl(node, context)
+        break
+      case 'ReturnStatement':
+        genReturnStatement(node, context)
+        break
+      case 'CallExpression':
+        genCallExpression(node, context)
+        break
+      case 'StringLiteral':
+        genStringLiteral(node, context)
+        break
+      case 'ArrayExpression':
+        genArrayExpression(node, context)
+        break
     }
   }
 
-  const ast = parse('<div><p>Vue</p><p>Template</p></div>')
-  transform(ast)
-  console.log(ast)
+  // ============================ code generate ============================
+
+  function genFunctionDecl(node, context) {
+    const { push, indent, deIndent } = context
+    push(`function ${node.id.name}`)
+    push(`(`)
+    genNodeList(node.params, context)
+    push(`)`)
+    push(`{`)
+    indent()
+    node.body.forEach(n => genNode(n, context))
+    deIndent()
+    push(`}`)
+  }
+  function genNodeList(nodes, context) {
+    const { push } = context
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i]
+      genNode(node, context)
+      if (i < (nodes.length - 1)) {
+        push(', ')
+      }
+    }
+  }
+  function genReturnStatement(node, context) {
+    const { push } = context
+    push(`return `)
+    genNode(node.return, context)
+  }
+  function genCallExpression(node, context) {
+    const { push } = context
+    const { callee, arguments: args } = node
+    push(`${callee.name}(`)
+    genNodeList(args, context)
+    push(`)`)
+  }
+  function genStringLiteral(node, context) {
+    const { push } = context
+    push(`'${node.value}'`)
+  }
+  function genArrayExpression(node, context) {
+    const { push } = context
+    push(`[`)
+    genNodeList(node.elements, context)
+    push(`]`)
+  }
 </script>
