@@ -1,0 +1,60 @@
+<body></body>
+
+<script>
+  const TextModes = {
+    DATA: "DATA",
+    RCDATA: "RCDATA",
+    RAWTEXT: "RAWTEXT",
+    CDATA: "CDATA",
+  };
+
+  function parse(str) {
+    const context = {
+      source: str,
+      mode: TextModes.DATA,
+      advanceBy(num) {
+        context.source = context.source.slice(num);
+      },
+      advanceSpaces() {
+        const match = /^[\t\r\n\f ]+/.exec(context.source);
+        if (match) {
+          context.advanceBy(match[0].length);
+        }
+      },
+    };
+    const nodes = parseChildren(context, []);
+    return {
+      type: "Root",
+      children: nodes,
+    };
+  }
+
+  function parseChildren(context, ancestors) {
+    let nodes = [];
+    const { mode, source } = context;
+
+    while (!isEnd(context, ancestors)) {
+        let node
+        if (mode === TextModes.DATA || mode === TextModes.RCDATA) {
+
+        }
+    }
+
+    return nodes;
+  }
+
+  function parseElement(context, ancestors) {}
+
+  function isEnd(context, ancestors) {
+    if (!context.source) return true;
+
+    // 与节点栈内全部的节点比较
+    for (let i = ancestors.length - 1; i >= 0; --i) {
+      if (context.source.startsWith(`</${ancestors[i].tag}`)) {
+        return true;
+      }
+    }
+  }
+
+  
+</script>

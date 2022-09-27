@@ -268,95 +268,95 @@
 
   console.log(ast);
 
-  console.log(generate(ast.jsNode))
+  console.log(generate(ast.jsNode));
   // ============================ code generate ============================
   function generate(node) {
     const ctx = {
-      code: '',
+      code: "",
       push(code) {
-        ctx.code += code
+        ctx.code += code;
       },
       currentIndent: 0,
       newline() {
-        ctx.code += '\n' + ` `.repeat(ctx.currentIndent)
+        ctx.code += "\n" + ` `.repeat(ctx.currentIndent);
       },
       indent() {
-        ctx.currentIndent++
-        ctx.newline()
+        ctx.currentIndent++;
+        ctx.newline();
       },
       deIndent() {
-        ctx.currentIndent--
-        ctx.newline()
-      }
-    }
-    genNode(node, ctx)
+        ctx.currentIndent--;
+        ctx.newline();
+      },
+    };
+    genNode(node, ctx);
 
-    return ctx.code
+    return ctx.code;
   }
   function genNode(node, context) {
-    switch(node.type) {
-      case 'FunctionDecl':
-        genFunctionDecl(node, context)
-        break
-      case 'ReturnStatement':
-        genReturnStatement(node, context)
-        break
-      case 'CallExpression':
-        genCallExpression(node, context)
-        break
-      case 'StringLiteral':
-        genStringLiteral(node, context)
-        break
-      case 'ArrayExpression':
-        genArrayExpression(node, context)
-        break
+    switch (node.type) {
+      case "FunctionDecl":
+        genFunctionDecl(node, context);
+        break;
+      case "ReturnStatement":
+        genReturnStatement(node, context);
+        break;
+      case "CallExpression":
+        genCallExpression(node, context);
+        break;
+      case "StringLiteral":
+        genStringLiteral(node, context);
+        break;
+      case "ArrayExpression":
+        genArrayExpression(node, context);
+        break;
     }
   }
 
   // ============================ code generate ============================
 
   function genFunctionDecl(node, context) {
-    const { push, indent, deIndent } = context
-    push(`function ${node.id.name}`)
-    push(`(`)
-    genNodeList(node.params, context)
-    push(`)`)
-    push(`{`)
-    indent()
-    node.body.forEach(n => genNode(n, context))
-    deIndent()
-    push(`}`)
+    const { push, indent, deIndent } = context;
+    push(`function ${node.id.name}`);
+    push(`(`);
+    genNodeList(node.params, context);
+    push(`)`);
+    push(`{`);
+    indent();
+    node.body.forEach((n) => genNode(n, context));
+    deIndent();
+    push(`}`);
   }
   function genNodeList(nodes, context) {
-    const { push } = context
+    const { push } = context;
     for (let i = 0; i < nodes.length; i++) {
-      const node = nodes[i]
-      genNode(node, context)
-      if (i < (nodes.length - 1)) {
-        push(', ')
+      const node = nodes[i];
+      genNode(node, context);
+      if (i < nodes.length - 1) {
+        push(", ");
       }
     }
   }
   function genReturnStatement(node, context) {
-    const { push } = context
-    push(`return `)
-    genNode(node.return, context)
+    const { push } = context;
+    push(`return `);
+    genNode(node.return, context);
   }
   function genCallExpression(node, context) {
-    const { push } = context
-    const { callee, arguments: args } = node
-    push(`${callee.name}(`)
-    genNodeList(args, context)
-    push(`)`)
+    const { push } = context;
+    const { callee, arguments: args } = node;
+    push(`${callee.name}(`);
+    genNodeList(args, context);
+    push(`)`);
   }
   function genStringLiteral(node, context) {
-    const { push } = context
-    push(`'${node.value}'`)
+    const { push } = context;
+    push(`'${node.value}'`);
   }
   function genArrayExpression(node, context) {
-    const { push } = context
-    push(`[`)
-    genNodeList(node.elements, context)
-    push(`]`)
+    const { push } = context;
+    push(`[`);
+    genNodeList(node.elements, context);
+    push(`]`);
   }
 </script>
