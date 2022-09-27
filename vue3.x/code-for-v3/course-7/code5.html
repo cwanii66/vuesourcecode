@@ -22,6 +22,7 @@
         }
       },
     };
+    // arguments[1] -> ancestors stack
     const nodes = parseChildren(context, []);
     return {
       type: "Root",
@@ -34,16 +35,50 @@
     const { mode, source } = context;
 
     while (!isEnd(context, ancestors)) {
-        let node
-        if (mode === TextModes.DATA || mode === TextModes.RCDATA) {
-
+      let node;
+      if (mode === TextModes.DATA || mode === TextModes.RCDATA) {
+        if (mode === TextModes.DATA && source[0] === "<") {
+          if (source[1] === "!") {
+            if (source.startsWith("<!--")) {
+              node = parseComment(context);
+            } else if (source.startsWith("<![CDATA[")) {
+              node = parseCDATA(context, ancestors);
+            }
+          } else if (source[1] === '/') {
+            // need to throw an error
+          } else if (/[a-z]/i.test(source[1])) {
+            node = parseElement(context, ancestors)
+          }
+        } else if (source.startsWith('{ {')) {
+          node = parseInterpolation(context)
         }
+      }
+
+      if (!node) {
+        node = parseText(context)
+      }
+
+      nodes.push(node)
     }
 
     return nodes;
   }
 
-  function parseElement(context, ancestors) {}
+  function parseElement(context, ancestors) {
+    
+  }
+  function parseInterpolation(context) {
+
+  }
+  function parseCDATA(context, ancestors) {
+
+  }
+  function parseComment(context) {
+
+  }
+  function parseText(context) {
+
+  }
 
   function isEnd(context, ancestors) {
     if (!context.source) return true;
@@ -55,6 +90,4 @@
       }
     }
   }
-
-  
 </script>
