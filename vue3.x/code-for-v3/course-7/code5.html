@@ -44,48 +44,54 @@
             } else if (source.startsWith("<![CDATA[")) {
               node = parseCDATA(context, ancestors);
             }
-          } else if (source[1] === '/') {
+          } else if (source[1] === "/") {
             // need to throw an error
+            // console.error('无效的结束标签...');
+            // continue;
           } else if (/[a-z]/i.test(source[1])) {
-            node = parseElement(context, ancestors)
+            node = parseElement(context, ancestors); // entry of recursive decent
           }
-        } else if (source.startsWith('{ {')) {
-          node = parseInterpolation(context)
+        } else if (source.startsWith("{ {")) {
+          node = parseInterpolation(context);
         }
       }
 
       if (!node) {
-        node = parseText(context)
+        node = parseText(context);
       }
 
-      nodes.push(node)
+      nodes.push(node);
     }
 
     return nodes;
   }
 
   function parseElement(context, ancestors) {
+    const element = parseTag(context)
+    if (element.isSelfClosing) return element
+
+    ancestors.push(element)
+    element.children = parseChildren(context, ancestors)
+    ancestors.pop()
     
+    if (context.source.startsWith(`${element.tag}`)) {
+      parseTag(context, 'end')
+    } else {
+      console.error(`${element.tag}标签缺少闭合标签`)
+    }
+    return element
   }
-  function parseInterpolation(context) {
-
-  }
-  function parseCDATA(context, ancestors) {
-
-  }
-  function parseComment(context) {
-
-  }
-  function parseText(context) {
-
-  }
+  function parseInterpolation(context) {}
+  function parseCDATA(context, ancestors) {}
+  function parseComment(context) {}
+  function parseText(context) {}
 
   function isEnd(context, ancestors) {
     if (!context.source) return true;
 
-    // 与节点栈内全部的节点比较
+    const parent = ancestors[ancestors.length - 1];
     for (let i = ancestors.length - 1; i >= 0; --i) {
-      if (context.source.startsWith(`</${ancestors[i].tag}`)) {
+      if (parent && context.source.startsWith(`</${ancestors[i].tag}`)) {
         return true;
       }
     }
