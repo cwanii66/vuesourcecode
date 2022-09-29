@@ -13,9 +13,11 @@
       source: str,
       mode: TextModes.DATA,
       advanceBy(num) {
+        // advanceBy 用来消费指定数量的字符，它接收一个数字作为参数
         context.source = context.source.slice(num);
       },
       advanceSpaces() {
+        // 消费空白字符
         const match = /^[\t\r\n\f ]+/.exec(context.source);
         if (match) {
           context.advanceBy(match[0].length);
@@ -67,19 +69,43 @@
   }
 
   function parseElement(context, ancestors) {
-    const element = parseTag(context)
-    if (element.isSelfClosing) return element
+    const element = parseTag(context);
+    if (element.isSelfClosing) return element;
 
-    ancestors.push(element)
-    element.children = parseChildren(context, ancestors)
-    ancestors.pop()
-    
+    ancestors.push(element);
+    element.children = parseChildren(context, ancestors);
+    ancestors.pop();
+
     if (context.source.startsWith(`${element.tag}`)) {
-      parseTag(context, 'end')
+      parseTag(context, "end");
     } else {
-      console.error(`${element.tag}标签缺少闭合标签`)
+      console.error(`${element.tag}标签缺少闭合标签`);
     }
-    return element
+    return element;
+  }
+  function parseTag(context, type = "start") {
+    const { advanceBy, advanceSpaces } = context;
+    const match =
+      type === "start"
+        ? /^<([a-z][^\t\r\n\f />]*)/i.exec(context.source)
+        : /^<\/([a-z][^\t\r\n\f />]*)/i.exec(context.source);
+    const tag = match[1]
+
+    advanceBy(match[0].length)
+    advanceSpaces()
+
+    const props = parseAttributes(context)
+
+    const isSelfClosing = context.source.startsWith('/>')
+    advanceBy(isSelfClosing ? 2 : 1)
+
+    return {
+      type: 'Element',
+      tag,
+      props,
+      children: [],
+      isSelfClosing
+    }
   }
   function parseInterpolation(context) {}
   function parseCDATA(context, ancestors) {}
