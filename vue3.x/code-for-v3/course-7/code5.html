@@ -73,6 +73,14 @@
     if (element.isSelfClosing) return element;
 
     ancestors.push(element);
+    // 切换到正确的文本模式
+    if (element.tag === 'textarea' || element.tag === 'title') {
+      context.mode = TextModes.RCDATA
+    } else if (/style|xmp|iframe|noembed|noframes|noscript/.test(element.tag)) {
+      context.mode = TextModes.RAWTEXT
+    } else {
+      context.mode = TextModes.DATA
+    }
     element.children = parseChildren(context, ancestors);
     ancestors.pop();
 
@@ -105,6 +113,15 @@
       props,
       children: [],
       isSelfClosing
+    }
+  }
+  function parseAttributes(context) {
+    const { advanceBy, advanceSpaces } = context
+    while(
+      !context.source.startsWith('>') &&
+      !context.source.startsWith('/>')
+    ) {
+
     }
   }
   function parseInterpolation(context) {}
