@@ -134,7 +134,7 @@
       let value = ''
 
       const quote = context.source[0]
-      const isQuote = quote === '"' || quote === "'"
+      const isQuote = (quote === '"' || quote === "'")
       
       if (isQuote) {
         advanceBy(1) // "
@@ -163,7 +163,26 @@
   function parseInterpolation(context) {}
   function parseCDATA(context, ancestors) {}
   function parseComment(context) {}
-  function parseText(context) {}
+  function parseText(context) {
+    const endIndex = context.source.length // default: rest of the entire template
+    const ltIndex = context.source.indexOf('<')
+    const delimiterIndex = context.source.indexOf('{ {')
+
+    // {{}}  &   <  ==> two satuations
+    if (ltIndex > -1 && ltIndex < endIndex) {
+      endIndex = ltIndex
+    }
+    if (delimiterIndex > -1 && delimiterIndex < endIndex) {
+      endIndex = delimiterIndex
+    }
+    const content = context.source.slice(0, endIndex)
+    context.advanceBy(content.length)
+
+    return {
+      type: 'text',
+      content
+    }
+  }
 
   function isEnd(context, ancestors) {
     if (!context.source) return true;
