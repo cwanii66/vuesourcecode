@@ -200,7 +200,7 @@
     "gt;": ">",
     "lt": "<",
     "lt;": "<",
-    "ltcc": "⪦"
+    "ltcc;": "⪦"
   }
   
   function decodeHtml(rawText, asAttr = false) {
@@ -238,9 +238,14 @@
               (max, name) => Math.max(max, name.length), 0
             )
           }
-          for (let l = maxCRNameLength; !value && l > 0; --l) {
+          for (let l = maxCRNameLength; l > 0; --l) {
             name = rawText.substr(1, l)
-            value = (namedCharacterReferences)[name]
+            if (!value) {
+              value = (namedCharacterReferences)[name]
+            } else {
+              (namedCharacterReferences)[name]
+                && (value = (namedCharacterReferences)[name])
+            }
           }
           if (value) {
             const semi = name.endsWith(';')
