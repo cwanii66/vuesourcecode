@@ -160,7 +160,21 @@
     }
     return props
   }
-  function parseInterpolation(context) {}
+  function parseInterpolation(context) {
+    let closeIndex = 0
+    context.advanceBy('{ {'.length)
+    closeIndex = context.source.indexOf('}}')
+    const content = context.source.slice(0, closeIndex)
+    context.advanceBy('}}'.length)
+
+    return {
+      type: 'Interpolation',
+      content: {
+        type: 'Express',
+        content: decodeHtml(content)
+      }
+    }
+  }
   function parseCDATA(context, ancestors) {}
   function parseComment(context) {}
   function parseText(context) {
