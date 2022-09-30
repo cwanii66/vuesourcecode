@@ -117,12 +117,48 @@
   }
   function parseAttributes(context) {
     const { advanceBy, advanceSpaces } = context
+    const props = []
+
     while(
       !context.source.startsWith('>') &&
       !context.source.startsWith('/>')
     ) {
+      const match = /^[^\t\r\n\f />][^\t\r\n\f />=]*/.exec(context.source)
+      const name = match[0]
 
+      advanceBy(name.length)
+      advanceSpaces()
+      advanceBy(1) // =
+      advanceSpaces()
+
+      let value = ''
+
+      const quote = context.source[0]
+      const isQuote = quote === '"' || quote === "'"
+      
+      if (isQuote) {
+        advanceBy(1) // "
+        const endQuoteIndex = context.source.indexOf(quote)
+        if (endQuoteIndex > -1) {
+          value = context.source.slice(0, endQuoteIndex)
+          advanceBy(1)
+        } else {
+          console.error('缺少引号')
+        }
+      } else {
+        const match = /^[^\t\n\r\f >]+]/.exec(context.source)
+        value = match[0]
+        advanceBy(value.length)
+      }
+      advanceSpaces()
+
+      props.push({
+        type: 'Attribute',
+        name,
+        value
+      })
     }
+    return props
   }
   function parseInterpolation(context) {}
   function parseCDATA(context, ancestors) {}
