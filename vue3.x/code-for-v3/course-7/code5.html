@@ -180,7 +180,7 @@
 
     return {
       type: 'text',
-      content
+      content: decodeHtml(content)
     }
   }
 
@@ -194,4 +194,80 @@
       }
     }
   }
+
+  const namedCharacterReferences = {
+    "gt": ">",
+    "gt;": ">",
+    "lt": "<",
+    "lt;": "<",
+    "ltcc": "⪦"
+  }
+  
+  function decodeHtml(rawText, asAttr = false) {
+    let offset = 0
+    const end = rawText.length
+    let decodedText = '' // output
+    let maxCRNameLength = 0 // max length of character reference
+
+    function advance(length) {
+      offset += length
+      rawText = rawText.slice(length)
+    }
+
+    while (offset < end) {
+      // 1. &    named reference
+      // 2. &#   decimal
+      // 3. &#x  hexa-decimal
+      const head = /&(?:#x?)?/i.exec(rawText)
+      if (!head) {
+        const remaining = end - offset
+        decodedText += rawText.slice(0, remaining)
+        advance(remaining)
+        break
+      }
+      decodedText += rawText.slice(0, head.index)
+      advance(head.index)
+
+      if (head[0] === '&') {
+        let name = ''
+        let value
+
+        if (/[0-9a-z]/i.test(rawText[1])) {
+          if (!maxCRNameLength) {
+            maxCRNameLength = Object.keys(namedCharacterReferences).reduce(
+              (max, name) => Math.max(max, name.length), 0
+            )
+          }
+          for (let l = maxCRNameLength; !value && l > 0; --l) {
+            name = rawText.substr(1, l)
+            value = (namedCharacterReferences)[name]
+          }
+          if (value) {
+            const semi = name.endsWith(';')
+            if (
+              asAttr &&
+              !semi &&
+              /[=a-z0-9]/i.test(rawText[name.length + 1] || '')
+            ) {
+              decodedText += `&${name}`
+              advance(1 + name.length)
+            } else {
+              decodedText += value
+              advance(1 + name.length)
+            }
+          } else {
+            decodedText += `&${name}`
+            advance(1 + name.length)
+            console.warn('may decode failed, please checkout the reference table')
+          }
+        } else {
+          decodedText += '&'
+          advance(1)
+        }
+      }
+    }
+
+    return decodedText
+  }
+
 </script>
