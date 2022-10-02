@@ -1,0 +1,18 @@
+<body></body>
+
+<script>
+  const map = new Map();
+  const weakMap = new WeakMap();
+
+  (() => {
+    const foo = { foo: 1 }
+    const bar = { bar: 2 }
+
+    map.set(foo, 1)
+    weakMap.set(bar, 2)
+  })();
+
+  // weakMap 键名引用对象是弱引用，该引用不计入垃圾回收机制
+  // 当它所引用对象的其他引用被清除，垃圾回收机制就会释放对象内存，一旦不再需要weakmap的键会自动消失
+  // 上面的函数执行完后，bar引用被垃圾回收，所以weakMap里的弱引用会被自动清楚，不需要手动释放
+</script>
