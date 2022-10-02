@@ -1,0 +1,65 @@
+<body></body>
+
+<script>
+  let activeEffect = null;
+  let bucket = new WeakMap();
+
+  function getDepsForProperty(target, key) {
+    let depsMap = bucket.get(target);
+    if (!depsMap) {
+      depsMap = new Map();
+      bucket.set(target, depsMap);
+    }
+    let deps = depsMap.get(key);
+    if (!deps) {
+      deps = new Set();
+      depsMap.set(key, deps);
+    }
+    return deps
+  }
+
+  function track(target, key) {
+    if (activeEffect) {
+      const deps = getDepsForProperty(target, key)
+      deps.add(activeEffect)
+    }
+  }
+  function trigger(target, key) {
+    const deps = getDepsForProperty(target, key)
+    deps.forEach(effect => effect())
+  }
+
+  const handler = {
+    get(target, key, receiver) {
+      track(target, key)
+      return Reflect.get(target, key, receiver)
+    },
+    set(target, key, newValue, receiver) {
+      const res = Reflect.set(target, key, newValue, receiver)
+      trigger(target, key)
+      return res
+    },
+  };
+
+  function reactive(target) {
+    const reactiveObj = new Proxy(target, handler);
+    return reactiveObj;
+  }
+  function watchEffect(effect) {
+    const _effect = () => {
+      activeEffect = _effect;
+      effect();
+      activeEffect = null;
+    };
+    _effect();
+  }
+
+  const obj = reactive({ reactivity: "reactive system" });
+  watchEffect(() => {
+    console.log("effect run");
+    document.body.innerText = obj.reactivity;
+  });
+  setTimeout(() => {
+    trigger(obj, 'reactivity')
+  }, 1000);
+</script>
