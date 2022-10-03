@@ -1,0 +1,91 @@
+<body></body>
+
+<script>
+  const bucket = new WeakMap();
+
+  const data = {
+    foo: true,
+    bar: true,
+  };
+  const obj = new Proxy(data, {
+    // 拦截读取操作
+    get(target, key) {
+      // 将副作用函数 activeEffect 添加到存储副作用函数的桶中
+      track(target, key);
+      // 返回属性值
+      return target[key];
+    },
+    // 拦截设置操作
+    set(target, key, newVal) {
+      // 设置属性值
+      target[key] = newVal;
+      // 把副作用函数从桶里取出并执行
+      trigger(target, key);
+    },
+  });
+  function track(target, key) {
+    let depsMap = bucket.get(target);
+    if (!depsMap) {
+      depsMap = new Map();
+      bucket.set(target, depsMap);
+    }
+    let deps = depsMap.get(key);
+    if (!deps) {
+      deps = new Set();
+      depsMap.set(key, deps);
+    }
+    deps.add(activeEffect);
+    activeEffect.deps.push(deps);
+  }
+  function trigger(target, key) {
+    const depsMap = bucket.get(target);
+    if (!depsMap) return;
+    const effects = depsMap.get(key);
+
+    const effectsToRun = new Set();
+    effects && effects.forEach((effectFn) => effectsToRun.add(effectFn));
+    effectsToRun.forEach((effectFn) => effectFn());
+    // effects && effects.forEach(effectFn => effectFn())
+  }
+
+  let activeEffect
+  const effectStack = []
+
+  function effect(fn) {
+    const effectFn = () => {
+      cleanup(effectFn)
+      activeEffect = effectFn
+      effectStack.push(effectFn)
+      fn()
+      // 在当前副作用函数执行完毕后，将当前副作用函数弹出栈，并还原 activeEffect 为之前的值
+      effectStack.pop()
+      activeEffect = effectStack[effectStack.length - 1] // 保证activeEffect 始终位于栈顶
+    }
+    effectFn.deps = []
+    effectFn()
+  }
+  function cleanup(effectFn) {
+    for (let i = 0; i < effectFn.deps.length; i++) {
+      const deps = effectFn.deps[i]
+      deps.delete(effectFn)
+    }
+    effectFn.deps.length = 0
+  }
+
+
+
+  // =====================================
+
+  let temp1, temp2
+  effect(function effectFn1() {
+    console.log('effectFn1 执行...')
+    effect(function effectFn2() {
+      console.log('effectFn2 执行...')
+      temp2 = obj.bar
+    })
+    temp1 = obj.foo
+  })
+  setTimeout(() => {
+    obj.foo = false
+  }, 500)
+</script>
