@@ -26,7 +26,7 @@ const obj = new Proxy(data, {
 })
 
 function track(target, key) {
-  if (!activeEffect) return // 意味着并不需要手机依赖，也就是说没有在watchEffect 中访问响应式依赖
+  if (!activeEffect) return // （普通访问，直接返回）意味着并不需要收集依赖，也就是说没有side effect需要订阅依赖
   let depsMap = bucket.get(target)
   if (!depsMap) {
     bucket.set(target, (depsMap = new Map()))
@@ -50,7 +50,13 @@ function trigger(target, key) {
       effectsToRun.add(effectFn)
     }
   })
-  effectsToRun.forEach(effectFn => effectFn())
+  effectsToRun.forEach(effectFn => {
+    if (effectFn.options.scheduler) {
+      effectFn.options.scheduler(effectFn)
+    } else {
+      effectFn()
+    }
+  })
   // effects && effects.forEach(effectFn => effectFn())
 }
 
@@ -59,7 +65,7 @@ let activeEffect
 // effect 栈
 const effectStack = []
 
-function effect(fn) {
+function effect(fn, options) {
   const effectFn = () => {
     cleanup(effectFn)
     // 当调用 effect 注册副作用函数时，将副作用函数复制给 activeEffect
@@ -73,6 +79,7 @@ function effect(fn) {
   }
   // activeEffect.deps 用来存储所有与该副作用函数相关的依赖集合
   effectFn.deps = []
+  effectFn.options = options
   // 执行副作用函数
   effectFn()
 }
@@ -86,14 +93,33 @@ function cleanup(effectFn) {
 }
 
 
-
-
 // =========================
+
+const jobQueue = new Set()
+const p = Promise.resolve()
+
+let isFlushing = false
+function flushJob() {
+  if (isFlushing) return
+  isFlushing = true
+  p.then(() => {
+    jobQueue.forEach(job => job())
+  }).finally(() => {
+    isFlushing = false
+  })
+}
 
 effect(() => {
   console.log(obj.foo)
+}, 
+  // provide opions
+{
+  scheduler: function(fn) {
+    jobQueue.add(fn)
+    flushJob()
+  }
 })
 obj.foo++
-console.log('end...')
+obj.foo = obj.foo + 1
 
 </script>
