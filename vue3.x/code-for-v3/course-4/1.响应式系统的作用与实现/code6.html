@@ -111,7 +111,7 @@ function flushJob() {
 
 effect(() => {
   console.log(obj.foo)
-}, 
+},
   // provide opions
 {
   scheduler: function(fn) {
@@ -120,6 +120,6 @@ effect(() => {
   }
 })
 obj.foo++
-obj.foo = obj.foo + 1
+obj = obj.foo + 1
 
 </script>
