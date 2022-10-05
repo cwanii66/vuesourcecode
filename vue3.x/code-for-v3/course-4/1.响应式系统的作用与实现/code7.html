@@ -113,6 +113,7 @@ function computed(getter) {
     lazy: true,
     scheduler() {
       dirty = true
+      trigger(obj, 'value')
     }
   })
 
@@ -122,6 +123,7 @@ function computed(getter) {
         value = effectFn()
         dirty = false
       }
+      track(obj, 'value')
       return value
     }
   }
@@ -135,5 +137,9 @@ function computed(getter) {
 const sumRes = computed(() => obj.foo + obj.bar)
 console.log(sumRes.value)
 obj.foo++
-console.log(sumRes.value)
+
+effect(() => {
+  console.log(sumRes.value)
+})
+obj.foo++
 </script>
