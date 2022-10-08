@@ -1,0 +1,35 @@
+<script>
+
+  const obj = { foo: 1 }
+  
+  const p = new Proxy(obj, {
+    get: () => obj.foo + 1,
+    set(target, key, value) {
+      obj[key] = 'whatever'
+    }
+  })
+  console.log(p.foo)
+  p.foo++
+  console.log(p.foo)
+
+  // 函数调用拦截
+  const fn = name => {
+    console.log('I\'m ', name)
+    return 'default return'
+  }
+
+  const p2 = new Proxy(fn, {
+    apply(target, thisArg, argArray) {
+      let name;
+      // 修改第一个实参为cwluvani的值
+      if (argArray.find(value => value === 'cwluvani')) name = 'chriswong'
+      target.call(thisArg, name)
+      return 'returns changed'
+    }
+  })
+  console.log(fn('cwluvani'))
+  console.log(p2('cwluvani'))
+
+  
+
+</script>
