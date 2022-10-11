@@ -8,7 +8,7 @@
         get(target, key, receiver) {
           if (key === "raw") return target;
           if (!isReadonly) track(target, key);
-          
+
           const res = Reflect.get(...arguments);
 
           if (isShallow) return res;
@@ -163,9 +163,13 @@
   // })
   // p2.foo.bar++
 
+  // effect(() => {
+  //   console.log(p3.baz);
+  // });
+  // p3.baz++;
+  // delete p3.baz;
   effect(() => {
-    console.log(p3.baz);
-  });
-  p3.baz++;
-  delete p3.baz;
+    console.log(p3.foo.bar)
+  })
+  p3.foo.bar++
 </script>
