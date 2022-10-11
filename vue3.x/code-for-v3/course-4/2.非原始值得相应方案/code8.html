@@ -7,11 +7,14 @@
       return new Proxy(reactiveTarget, {
         get(target, key, receiver) {
           if (key === "raw") return target;
-          track(target, key);
+          if (!isReadonly) track(target, key);
+          
           const res = Reflect.get(...arguments);
+
           if (isShallow) return res;
+
           if (typeof res === "object" && res !== null)
-            return selfReactive(res);
+            return isReadonly ? readonlyReactive(res) : selfReactive(res);
 
           return res;
         },
@@ -161,9 +164,8 @@
   // p2.foo.bar++
 
   effect(() => {
-    console.log(p3.baz)
-  })
-  p3.baz++
-  delete p3.baz
-
+    console.log(p3.baz);
+  });
+  p3.baz++;
+  delete p3.baz;
 </script>
