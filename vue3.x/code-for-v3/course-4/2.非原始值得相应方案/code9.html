@@ -1,0 +1,33 @@
+<script>
+  
+  const obj = {
+    foo: {
+      bar: 1
+    },
+    baz: 2
+  }
+
+  function reactive(obj) {
+    return createReactive(obj)
+  }
+  function shallowReactive(obj) {
+    return createReactive(obj, true)
+  }
+  // vue很常见的做法
+  function createReactive(obj, isShallow = false) {
+    return new Proxy(obj, {
+      get(target, key, receiver) {
+        // ...
+        const res = Reflect.get(...arguments)
+        if (isShallow) 
+          return res
+        if (typeof obj === 'object' || obj !== null) {
+          return reactive(res)
+        }
+        return res
+      }
+    })
+  }
+
+
+</script>
