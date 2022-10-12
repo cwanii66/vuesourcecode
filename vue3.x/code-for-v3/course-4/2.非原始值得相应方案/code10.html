@@ -1,0 +1,201 @@
+<script>
+  const bucket = new WeakMap();
+  const ITERATE_KEY = Symbol();
+
+  function createReactive(isShallow = false, isReadonly = false) {
+    return function selfReactive(reactiveTarget) {
+      return new Proxy(reactiveTarget, {
+        get(target, key, receiver) {
+          if (key === "raw") return target;
+          if (!isReadonly) track(target, key);
+
+          const res = Reflect.get(...arguments);
+
+          if (isShallow) return res;
+
+          if (typeof res === "object" && res !== null)
+            return isReadonly ? readonlyReactive(res) : selfReactive(res);
+
+          return res;
+        },
+        set(target, key, newVal, receiver) {
+          if (isReadonly) {
+            console.warn(`${key} is read only...`);
+            return true;
+          }
+          let oldVal = Reflect.get(target, key);
+          const res = Reflect.set(...arguments);
+          const type = Array.isArray(target)
+            ? +key < target.length ? 'SET' : 'ADD'
+            : Object.hasOwn(target, key) ? "SET" : "ADD";
+
+          if (target === receiver.raw) {
+            if (oldVal !== newVal && (oldVal === oldVal || newVal === newVal)) {
+              trigger(target, key, type, newVal); // 增加第四个参数，即触发响应的新值
+            }
+          }
+
+          return res;
+        },
+        deleteProperty(target, key) {
+          const DELETETYPE = "DELETE";
+          if (isReadonly) {
+            console.warn(`${key} cannot be deleted. \n ${key} is read only`);
+            return true;
+          }
+          const hadKey = Object.hasOwn(target, key);
+          const res = Reflect.deleteProperty(...arguments);
+          if (hadKey && res) trigger(target, key, DELETETYPE);
+
+          return res;
+        },
+      });
+    };
+  }
+
+  const reactive = createReactive();
+  const shallowReactive = createReactive(true);
+  const readonlyReactive = createReactive(false, true);
+  const readonlyShallowReactive = createReactive(true, false);
+
+  function track(target, key) {
+    if (!activeEffect) return;
+    let depsMap = bucket.get(target);
+    if (!depsMap) {
+      bucket.set(target, (depsMap = new Map()));
+    }
+    let deps = depsMap.get(key);
+    if (!deps) {
+      depsMap.set(key, (deps = new Set()));
+    }
+    deps.add(activeEffect);
+    activeEffect.deps.push(deps);
+  }
+
+  function trigger(target, key, type, newVal) {
+    const depsMap = bucket.get(target);
+    if (!depsMap) return;
+    const effects = depsMap.get(key);
+    const iterateEffects = depsMap.get(ITERATE_KEY);
+
+    const effectsToRun = new Set();
+    effects &&
+      effects.forEach((effectFn) => {
+        if (effectFn !== activeEffect) {
+          effectsToRun.add(effectFn);
+        }
+      });
+
+    if (type === "ADD" || type === "DELETE") {
+      // means set trap has effect on ownKeys interception
+      iterateEffects &&
+        iterateEffects.forEach((effectFn) => {
+          if (effectFn !== activeEffect) {
+            effectsToRun.add(effectFn);
+          }
+        });
+    }
+    if (type === 'ADD' && Array.isArray(target)) {
+      const lengthEffects = depsMap.get('length')
+      lengthEffects && lengthEffects.forEach(effectFn => {
+        if (effectFn !== activeEffect) {
+          effectsToRun.add(effectFn)
+        }
+      })
+    }
+
+    if (Array.isArray(target) && key === 'length') {
+      // 对于所有大于或等于新length值得元素
+      // 需要吧所有相关联的副作用函数取出并添加到effectsToRun中待执行
+      depsMap.forEach((effects, key) => {
+        if (key >= newVal) {
+          effects.forEach(effectFn => {
+            if (effectFn !== activeEffect) {
+              effectsToRun.add(effectFn)
+            }
+          })
+        }
+      })
+    }
+
+    effectsToRun.forEach((effectFn) => {
+      if (effectFn.options.scheduler) {
+        effectFn.options.scheduler(effectFn);
+      } else {
+        effectFn();
+      }
+    });
+    // effects && effects.forEach(effectFn => effectFn())
+  }
+
+  // 用一个全局变量存储当前激活的 effect 函数
+  let activeEffect;
+  // effect 栈
+  const effectStack = [];
+
+  function effect(fn, options = {}) {
+    const effectFn = () => {
+      cleanup(effectFn);
+      // 当调用 effect 注册副作用函数时，将副作用函数复制给 activeEffect
+      activeEffect = effectFn;
+      // 在调用副作用函数之前将当前副作用函数压栈
+      effectStack.push(effectFn);
+      const res = fn();
+      // 在当前副作用函数执行完毕后，将当前副作用函数弹出栈，并还原 activeEffect 为之前的值
+      effectStack.pop();
+      activeEffect = effectStack[effectStack.length - 1];
+
+      return res;
+    };
+    // 将 options 挂在到 effectFn 上
+    effectFn.options = options;
+    // activeEffect.deps 用来存储所有与该副作用函数相关的依赖集合
+    effectFn.deps = [];
+    // 执行副作用函数
+    if (!options.lazy) {
+      effectFn();
+    }
+
+    return effectFn;
+  }
+
+  function cleanup(effectFn) {
+    for (let i = 0; i < effectFn.deps.length; i++) {
+      const deps = effectFn.deps[i];
+      deps.delete(effectFn);
+    }
+    effectFn.deps.length = 0;
+  }
+
+  const obj1 = {
+    foo: {
+      bar: 1,
+    },
+    baz: 2,
+  };
+  const obj2 = {
+    foo2: 3,
+  };
+  const p1 = reactive(obj1);
+  const p2 = shallowReactive(obj1);
+  const p3 = readonlyReactive(obj1);
+
+  // effect(() => {
+  //   console.log(p1.foo.bar);
+  // });
+  // p1.foo.bar++;
+  // effect(() => {
+  //   console.log(p2.foo.bar)
+  // })
+  // p2.foo.bar++
+
+  // effect(() => {
+  //   console.log(p3.baz);
+  // });
+  // p3.baz++;
+  // delete p3.baz;
+  effect(() => {
+    console.log(p3.foo.bar)
+  })
+  p3.foo.bar++
+</script>
