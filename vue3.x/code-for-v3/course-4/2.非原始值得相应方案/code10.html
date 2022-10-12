@@ -7,7 +7,7 @@
       return new Proxy(reactiveTarget, {
         get(target, key, receiver) {
           if (key === "raw") return target;
-          if (!isReadonly) track(target, key);
+          if (!isReadonly && typeof key !== 'symbol') track(target, key);
 
           const res = Reflect.get(...arguments);
 
@@ -49,6 +49,10 @@
 
           return res;
         },
+        ownKeys(target) {
+          track(target, Array.isArray(target) ? 'length' : ITERATE_KEY)
+          return Reflect.ownKeys(target)
+        }
       });
     };
   }
