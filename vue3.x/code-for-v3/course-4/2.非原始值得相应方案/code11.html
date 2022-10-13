@@ -12,6 +12,12 @@
       const proxyObj = new Proxy(obj, {
         get(target, key, receiver) {
           if (key === "raw") return target;
+
+          // 如果操作的目标对象是数组，并且key存在于arrayInstrumentation上
+          // 那么返回定义在arrayInstrumentation上的值，也就是重写的数组方法
+          if (Array.isArray(target) && arrayInstrumentations.hasOwn(key))
+            return Reflect.get(arrayInstrumentations, key, receiver)
+
           if (!isReadonly && typeof key !== 'symbol') track(target, key);
 
           const res = Reflect.get(...arguments);
@@ -174,6 +180,13 @@
     effectFn.deps.length = 0;
   }
 
+  // custom array method
+  const arrayInstrumentations = {
+    includes() {
+
+    },
+  }
+
   const reactive = createReactive();
   const shallowReactive = createReactive(true);
   const readonlyReactive = createReactive(false, true);
@@ -193,7 +206,7 @@
   const obj = {}
   const arr = reactive([ obj ])
   console.log(arr.includes(arr[0])) // true
-  console.log(arr.includes(obj)) // false ---> when inner this -> arr proxy
+  console.log(arr.includes(obj)) // false ---> inner this -> arr proxy
 
   
 </script>
