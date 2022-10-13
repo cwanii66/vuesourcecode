@@ -180,12 +180,21 @@
     effectFn.deps.length = 0;
   }
 
+  const arrayMethodName = ['includes', 'indexOf', 'lastIndexOf']
   // custom array method
-  const arrayInstrumentations = {
-    includes() {
+  const arrayInstrumentations = {}
 
-    },
-  }
+  arrayMethodName.forEach((method) => {
+    const originMethod = Array.prototype[method]
+    arrayInstrumentations[method] = function(...args) {
+      let res = originMethod.apply(this, args)
+
+      if (!res) 
+        res = originMethod.apply(this.raw, args)
+
+      return res
+    }
+  })
 
   const reactive = createReactive();
   const shallowReactive = createReactive(true);
