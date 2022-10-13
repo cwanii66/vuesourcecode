@@ -15,7 +15,7 @@
 
           // 如果操作的目标对象是数组，并且key存在于arrayInstrumentation上
           // 那么返回定义在arrayInstrumentation上的值，也就是重写的数组方法
-          if (Array.isArray(target) && arrayInstrumentations.hasOwn(key))
+          if (Array.isArray(target) && Object.hasOwn(arrayInstrumentations, key))
             return Reflect.get(arrayInstrumentations, key, receiver)
 
           if (!isReadonly && typeof key !== 'symbol') track(target, key);
