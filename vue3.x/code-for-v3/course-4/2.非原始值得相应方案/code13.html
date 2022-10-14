@@ -61,17 +61,40 @@ mutationMethodName.forEach(method => {
 })
 
 
+const mutableInstrumentations = {
+  add(key) {
+    const target = this.raw
+    const hadKey = target.has(key)
+    const res = target.add(key)
+    if (!hadKey) {
+      trigger(target, key, 'ADD')
+    }
+    return res
+  },
+  delete(key) {
+    const target = this.raw
+    const hadKey = target.has(key)
+    const res = target.delete(key)
+    if (hadKey) {
+      trigger(target, key, 'DELETE')
+    }
+    return res
+  },
+}
 
 function createReactive(obj, isShallow = false, isReadonly = false) {
   return new Proxy(obj, {
     // 拦截读取操作
     get(target, key, receiver) {
+      if (key === 'raw') return target
       if (key === 'size') {
+        track(target, ITERATE_KEY)
         return Reflect.get(target, key, target)
       }
       
-      return target[key].bind(target)
+      return mutableInstrumentations[key]
     },
+
   })
 }
 
@@ -183,11 +206,11 @@ function cleanup(effectFn) {
 
 // =================================================================
 
-
-const s = new Set([1, 2, 4])
-const p = reactive(s)
-console.log(p.size)
-console.log(p.delete(4))
-console.log(p.size)
+const p = reactive(new Set([1, 2, 3]))
+effect(() => {
+  console.log(p.size)
+})
+p.add(1)
+console.log(p.delete(3))
 
 </script>
