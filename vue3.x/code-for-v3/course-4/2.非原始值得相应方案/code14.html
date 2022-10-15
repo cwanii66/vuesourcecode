@@ -61,83 +61,61 @@ mutationMethodName.forEach(method => {
 })
 
 
+const mutableInstrumentations = {
+  add(key) {
+    const target = this.raw
+    const hadKey = target.has(key)
+    const res = target.add(key)
+    if (!hadKey) {
+      trigger(target, key, 'ADD')
+    }
+    return res
+  },
+  delete(key) {
+    const target = this.raw
+    const hadKey = target.has(key)
+    const res = target.delete(key)
+    if (hadKey) {
+      trigger(target, key, 'DELETE')
+    }
+    return res
+  },
+  get(key) {
+    const target = this.raw
+    const had = target.has(key)
+    track(target, key)
+    if (had) {
+      const res = target.get(key)
+      return typeof res === "object" ? reactive(res) : res
+    }
+  },
+  set(key, value) {
+    const target = this.raw
+    const had = target.has(key)
+    const oldVal = target.get(key)
+    const rawVal = value.raw ?? value
+    // 我们吧value原封不动地设置到原始数据上
+    target.set(key, rawVal)
+    if (!had) {
+      trigger(target, key, 'ADD')
+    } else if (oldVal !== value || (oldVal === oldVal && value === value)) {
+      trigger(target, key, 'SET')
+    }
+  }
+}
 
 function createReactive(obj, isShallow = false, isReadonly = false) {
   return new Proxy(obj, {
     // 拦截读取操作
     get(target, key, receiver) {
       console.log('get: ', key)
-      if (key === 'raw') {
-        return target
+      if (key === 'raw') return target
+      if (key === 'size') {
+        track(target, ITERATE_KEY)
+        return Reflect.get(target, key, target)
       }
-
-      if (Array.isArray(target) && arrayInstrumentations.hasOwnProperty(key)) {
-        return Reflect.get(arrayInstrumentations, key, receiver)
-      }
-
-      // 非只读的时候才需要建立响应联系
-      if (!isReadonly && typeof key !== 'symbol') {
-        track(target, key)
-      }
-
-      const res = Reflect.get(target, key, receiver)
-
-      if (isShallow) {
-        return res
-      }
-
-      if (typeof res === 'object' && res !== null) {
-        // 深只读/响应
-        return isReadonly ? readonly(res) : reactive(res)
-      }
-
-      return res
+      return mutableInstrumentations[key]
     },
-    // 拦截设置操作
-    set(target, key, newVal, receiver) {
-      console.log('set: ', key )
-      if (isReadonly) {
-        console.warn(`属性 ${key} 是只读的`)
-        return true
-      }
-      const oldVal = target[key]
-      // 如果属性不存在，则说明是在添加新的属性，否则是设置已存在的属性
-      const type = Array.isArray(target)
-        ? Number(key) < target.length ? 'SET' : 'ADD'
-        : Object.prototype.hasOwnProperty.call(target, key) ? 'SET' : 'ADD'
-      // 设置属性值
-      const res = Reflect.set(target, key, newVal, receiver)
-      if (target === receiver.raw) {
-        if (oldVal !== newVal && (oldVal === oldVal || newVal === newVal)) {
-          trigger(target, key, type, newVal)
-        }
-      }
-
-      return res
-    },
-    has(target, key) {
-      track(target, key)
-      return Reflect.has(target, key)
-    },
-    ownKeys(target) {
-      console.log('ownkeys: ')
-      track(target, Array.isArray(target) ? 'length' : ITERATE_KEY)
-      return Reflect.ownKeys(target)
-    },
-    deleteProperty(target, key) {
-      if (isReadonly) {
-        console.warn(`属性 ${key} 是只读的`)
-        return true
-      }
-      const hadKey = Object.prototype.hasOwnProperty.call(target, key)
-      const res = Reflect.deleteProperty(target, key)
-
-      if (res && hadKey) {
-        trigger(target, key, 'DELETE')
-      }
-
-      return res
-    }
   })
 }
 
@@ -157,7 +135,6 @@ function track(target, key) {
 }
 
 function trigger(target, key, type, newVal) {
-  console.log('trigger', key)
   const depsMap = bucket.get(target)
   if (!depsMap) return
   const effects = depsMap.get(key)
@@ -249,18 +226,21 @@ function cleanup(effectFn) {
 
 // =================================================================
 
+// const p = reactive(new Map([['key', 1]]))
 
-const arr = reactive([])
+// effect(() => {
+//   console.log(p.get('key'))
+// })
+// p.set('key', 2)
 
+const m = new Map()
+const p1 = reactive(m)
+const p2 = reactive(new Map())
+p1.set('p2', p2)
 effect(() => {
-  console.log('effect 1 run')
-  arr.push(1)
+  console.log(m.get('p2').size)
 })
 
-effect(() => {
-  console.log('effect 2 run')
-  arr.push(1)
-})
-
+m.get('p2').set('foo', 1)
 
 </script>
