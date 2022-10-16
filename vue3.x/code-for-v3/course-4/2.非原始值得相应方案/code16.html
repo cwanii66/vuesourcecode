@@ -1,0 +1,292 @@
+<body></body>
+<script>
+
+
+// 存储副作用函数的桶
+const bucket = new WeakMap()
+const ITERATE_KEY = Symbol()
+
+const reactiveMap = new Map()
+
+function reactive(obj) {
+  const proxy = createReactive(obj)
+
+  const existionProxy = reactiveMap.get(obj)
+  if (existionProxy) return existionProxy
+
+  reactiveMap.set(obj, proxy)
+
+  return proxy
+}
+function shallowReactive(obj) {
+  return createReactive(obj, true)
+}
+
+function readonly(obj) {
+  return createReactive(obj, false, true)
+}
+
+function shallowReadonly(obj) {
+  return createReactive(obj, true, true)
+}
+
+const arrayInstrumentations = {}
+
+;['includes', 'indexOf', 'lastIndexOf'].forEach(method => {
+  const originMethod = Array.prototype[method]
+  arrayInstrumentations[method] = function(...args) {
+    // this 是代理对象，先在代理对象中查找，将结果存储到 res 中
+    let res = originMethod.apply(this, args)
+
+    if (res === false) {
+      // res 为 false 说明没找到，在通过 this.raw 拿到原始数组，再去原始数组中查找，并更新 res 值
+      res = originMethod.apply(this.raw, args)
+    }
+    // 返回最终的结果
+    return res
+  }
+})
+
+let shouldTrack = true
+const mutationMethodName = ['push', 'pop', 'shift', 'unshift', 'splice']
+
+mutationMethodName.forEach(method => {
+  const originMethod = Array.prototype[method]
+  arrayInstrumentations[method] = function(...args) {
+    shouldTrack = false
+    let res = originMethod.apply(this, args)
+    shouldTrack = true
+    return res
+  }
+})
+
+
+const mutableInstrumentations = {
+  add(key) {
+    const target = this.raw
+    const hadKey = target.has(key)
+    const res = target.add(key)
+    if (!hadKey) {
+      trigger(target, key, 'ADD')
+    }
+    return res
+  },
+  delete(key) {
+    const target = this.raw
+    const hadKey = target.has(key)
+    const res = target.delete(key)
+    if (hadKey) {
+      trigger(target, key, 'DELETE')
+    }
+    return res
+  },
+  get(key) {
+    const target = this.raw
+    const had = target.has(key)
+    track(target, key)
+    if (had) {
+      const res = target.get(key)
+      return typeof res === "object" ? reactive(res) : res
+    }
+  },
+  set(key, value) {
+    const target = this.raw
+    const had = target.has(key)
+    const oldVal = target.get(key)
+    const rawVal = value.raw ?? value
+    // 我们吧value原封不动地设置到原始数据上
+    target.set(key, rawVal)
+    if (!had) {
+      trigger(target, key, 'ADD')
+    } else if (oldVal !== value || (oldVal === oldVal && value === value)) {
+      trigger(target, key, 'SET')
+    }
+  },
+  forEach(fn, thisArg) {
+    // util func -> 用来把可代理的值转换为响应式数据
+    const wrap = val => typeof val === "object" ? reactive(val) : val
+    const target = this.raw
+    track(target, ITERATE_KEY)
+    target.forEach((v, k) => {
+      fn.call(thisArg, wrap(v), wrap(k), this) // bind thisArg and call
+    }) // data here is not reactive if function is called with raw target
+  },
+  [Symbol.iterator]: iterationMethod,
+  entries: iterationMethod,
+}
+
+function iterationMethod() {
+  const target = this.raw
+  const iterator = target[Symbol.iterator]()
+
+  const wrap = (val) => typeof val === 'object' ? reactive(val) : val
+
+  track(target, ITERATE_KEY)
+
+  return {
+    next() {
+      const { value, done } = iterator.next()
+      return {
+        value: value ? [ wrap(value[0]), wrap(value[1]) ] : value,
+        done
+      }
+    },
+    [Symbol.iterator]() {
+      return this
+    }
+  }
+}
+
+function createReactive(obj, isShallow = false, isReadonly = false) {
+  return new Proxy(obj, {
+    // 拦截读取操作
+    get(target, key, receiver) {
+      console.log('get: ', key)
+      if (key === 'raw') return target
+      if (key === 'size') {
+        track(target, ITERATE_KEY)
+        return Reflect.get(target, key, target)
+      }
+      return mutableInstrumentations[key]
+    },
+  })
+}
+
+
+function track(target, key) {
+  if (!activeEffect || !shouldTrack) return
+  let depsMap = bucket.get(target)
+  if (!depsMap) {
+    bucket.set(target, (depsMap = new Map()))
+  }
+  let deps = depsMap.get(key)
+  if (!deps) {
+    depsMap.set(key, (deps = new Set()))
+  }
+  deps.add(activeEffect)
+  activeEffect.deps.push(deps)
+}
+
+function trigger(target, key, type, newVal) {
+  const depsMap = bucket.get(target)
+  if (!depsMap) return
+  const effects = depsMap.get(key)
+
+  const effectsToRun = new Set()
+  effects && effects.forEach(effectFn => {
+    if (effectFn !== activeEffect) {
+      effectsToRun.add(effectFn)
+    }
+  })
+  
+  if (
+    type === 'ADD' || 
+    type === 'DELETE' ||
+    (
+      type === 'SET' && Object.prototype.toString.call(target) === '[object Map]'
+    )
+  ) {
+    const iterateEffects = depsMap.get(ITERATE_KEY)
+    iterateEffects && iterateEffects.forEach(effectFn => {
+      if (effectFn !== activeEffect) {
+        effectsToRun.add(effectFn)
+      }
+    })
+  }
+
+  if (type === 'ADD' && Array.isArray(target)) {
+    const lengthEffects = depsMap.get('length')
+    lengthEffects && lengthEffects.forEach(effectFn => {
+      if (effectFn !== activeEffect) {
+        effectsToRun.add(effectFn)
+      }
+    })
+  }
+
+  if (Array.isArray(target) && key === 'length') {
+    depsMap.forEach((effects, key) => {
+      if (key >= newVal) {
+        effects.forEach(effectFn => {
+          if (effectFn !== activeEffect) {
+            effectsToRun.add(effectFn)
+          }
+        })
+      }
+    })
+  }
+
+  effectsToRun.forEach(effectFn => {
+    if (effectFn.options.scheduler) {
+      effectFn.options.scheduler(effectFn)
+    } else {
+      effectFn()
+    }
+  })
+}
+
+// 用一个全局变量存储当前激活的 effect 函数
+let activeEffect
+// effect 栈
+const effectStack = []
+
+function effect(fn, options = {}) {
+  const effectFn = () => {
+    cleanup(effectFn)
+    // 当调用 effect 注册副作用函数时，将副作用函数复制给 activeEffect
+    activeEffect = effectFn
+    // 在调用副作用函数之前将当前副作用函数压栈
+    effectStack.push(effectFn)
+    const res = fn()
+    // 在当前副作用函数执行完毕后，将当前副作用函数弹出栈，并还原 activeEffect 为之前的值
+    effectStack.pop()
+    activeEffect = effectStack[effectStack.length - 1]
+
+    return res
+  }
+  // 将 options 挂在到 effectFn 上
+  effectFn.options = options
+  // activeEffect.deps 用来存储所有与该副作用函数相关的依赖集合
+  effectFn.deps = []
+  // 执行副作用函数
+  if (!options.lazy) {
+    effectFn()
+  }
+
+  return effectFn
+}
+
+function cleanup(effectFn) {
+  for (let i = 0; i < effectFn.deps.length; i++) {
+    const deps = effectFn.deps[i]
+    deps.delete(effectFn)
+  }
+  effectFn.deps.length = 0
+}
+
+// // =================================================================
+// const p = reactive(new Map([
+//   ['key1', 'value1'],
+//   ['key2', 'value2']
+// ]))
+
+// effect(() => {
+//   for (const [key, value] of p) {
+//     console.log(key, value)
+//   }
+// })
+// p.set('key3', 'value3')
+
+const p = reactive(new Map([
+  ['key1', 'value1'],
+  ['key2', 'value2']
+]))
+
+effect(() => {
+  for (const [key, value] of p.entries()) {
+    console.log(key, value)
+  }
+})
+p.set('key3', 'value3')
+
+
+</script>
