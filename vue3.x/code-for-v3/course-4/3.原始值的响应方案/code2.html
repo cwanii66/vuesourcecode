@@ -257,12 +257,49 @@ function ref(val) {
   return reactive(wrapper)
 }
 
-const refVal = ref(1)
-effect(() => {
-  console.log(refVal.value)
-})
-refVal.value++
+// const refVal = ref(1)
+// effect(() => {
+//   console.log(refVal.value)
+// })
+// refVal.value++
 
+
+const obj = reactive({ foo: 1, bar: 2 })
+// const newObj = {
+//   ...obj
+// }
+// effect(() => {
+//   console.log(newObj.foo)
+// })
+// newObj.foo = 100
+
+function toRef(obj, key) {
+  const wrapper = {
+    get value() {
+      return obj[key]
+    },
+    set value(val) {
+      obj[key] = val
+    }
+  }
+  Object.defineProperty(wrapper, '__v_isRef', {
+    value: true
+  })
+  return wrapper
+}
+function toRefs(obj) {
+  const ret = {}
+  for (const key in obj) {
+    ret[key] = toRef(obj, key)
+  }
+  return ret
+}
+
+const newObj = {
+  ...toRefs(obj)
+}
+console.log(newObj.foo.value)
+console.log(newObj.bar.value)
 
 
 </script>

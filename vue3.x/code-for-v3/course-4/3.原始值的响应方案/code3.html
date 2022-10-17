@@ -257,11 +257,21 @@ function ref(val) {
   return reactive(wrapper)
 }
 
-const refVal = ref(1)
-effect(() => {
-  console.log(refVal.value)
-})
-refVal.value++
+// const refVal = ref(1)
+// effect(() => {
+//   console.log(refVal.value)
+// })
+// refVal.value++
+
+
+const obj = reactive({ foo: 1, bar: 2 })
+// const newObj = {
+//   ...obj
+// }
+// effect(() => {
+//   console.log(newObj.foo)
+// })
+// newObj.foo = 100
 
 
 
