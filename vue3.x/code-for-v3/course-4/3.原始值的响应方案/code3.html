@@ -157,6 +157,7 @@ function trigger(target, key, type, newVal) {
   const depsMap = bucket.get(target)
   if (!depsMap) return
   const effects = depsMap.get(key)
+  // if (effects.size === 0) return
 
   const effectsToRun = new Set()
   effects && effects.forEach(effectFn => {
@@ -257,22 +258,55 @@ function ref(val) {
   return reactive(wrapper)
 }
 
-// const refVal = ref(1)
-// effect(() => {
-//   console.log(refVal.value)
-// })
-// refVal.value++
+function toRef(obj, key) {
+  const wrapper = {
+    get value() {
+      return obj[key]
+    },
+    set value(val) {
+      obj[key] = val
+    }
+  }
+  Object.defineProperty(wrapper, '__v_isRef', {
+    value: true,
+    enumerable: false,
+    configurable: false,
+    writable: false,
+  })
 
+  return wrapper
+}
+function toRefs(obj) {
+  const ret = {}
+  for (const key in obj) {
+    ret[key] = toRef(obj, key)
+  }
+  return ret
+}
+
+function proxyRefs(target) {
+  return new Proxy(target, {
+    get(target, key, receiver) {
+      const value = Reflect.get(...arguments)
+      return value.__v_isRef ? value.value : value
+    },
+    set(target, key, newVal, receiver) {
+      const value = target[key]
+      if (value.__v_isRef) {
+        value.value = newVal
+      }
+      return Reflect.set(...arguments)
+    }
+  })
+}
 
 const obj = reactive({ foo: 1, bar: 2 })
-// const newObj = {
-//   ...obj
-// }
-// effect(() => {
-//   console.log(newObj.foo)
-// })
-// newObj.foo = 100
 
+const newObj = proxyRefs({ ...toRefs(obj) })
+console.log(newObj.foo)
+console.log(newObj.bar)
 
+newObj.foo = 100
+console.log(newObj.foo)
 
 </script>
