@@ -1,17 +1,79 @@
-<body></body>
+<body>
+  <div id="app"></div>
+</body>
 
 <script src="https://unpkg.com/@vue/reactivity@3.0.5/dist/reactivity.global.js"></script>
 <script>
   const { effect, ref } = VueReactivity
-
-  function renderer(domString, container) {
-    container.innerHTML = domString
+  function h(tag, children, props) {
+    return {
+      tag,
+      children,
+      props
+    }
   }
-  const count = ref(1)
-  effect(() => {
-    renderer(`<h1> ${count.value} </h1>`, document.body)
-  })
-  setTimeout(() => {
-    count.value++
-  }, 1000)
+  function createRenderer(backend) {
+
+    const {
+      createElement,
+      setElementText,
+      insert
+    } = backend
+
+    // n1: old vnode
+    // n2: new vnode
+    // container
+    function patch(n1, n2, container) {
+      // initially mount
+      if (!n1) {
+        mountElement(n2, container)
+      } else {
+        // n1 exists --> means new vnode should be patched
+      }
+    }
+    function mountElement(vnode, container) {
+      const el = createElement(vnode.tag)
+      if (typeof vnode.children === 'string') {
+        setElementText(el, vnode.children)
+      }
+      insert(el)
+    }
+    function render(vnode, container) {
+      if (vnode) {
+        // patch
+        patch(container._vnode, vnode, container)
+      } else {
+        if (container._vnode) {
+          // unmount
+          container.innerHTML = ''
+        }
+      }
+      container._vnode = vnode
+    }
+
+    return {
+      render
+    }
+  }
+
+  const renderer = createRenderer({
+    createElement(tag) {
+      console.log(`create element ${tag}`)
+      return document.createElement(tag)
+    },
+    setElementText(el, text) {
+      console.log(`set ${JSON.stringify(el)} text content: ${text}`)
+      el.textContent = text
+    },
+    insert(el, parent, anchor = null) {
+      console.log(`insert ${JSON.stringify(el)} to ${JSON.stringify(parent)}`)
+      parent.insertBefore(el, anchor)
+    }
+  }) // renderer has ability to render and patch, etc.
+
+  const vnode1 = h('main', 'main text', null)
+  const vnode2 = h('h1', 'h1 text', null)
+  renderer.render(vnode1, document.getElementById('#app')) // mount
+  // renderer.render(vnode2, document.getElementById('#app')) // update
+  renderer.render(null, document.getElementById('#app')) // unmount
 </script>
