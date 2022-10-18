@@ -1,0 +1,40 @@
+<body>
+  <div id="app"></div>
+</body>
+
+<script src="https://unpkg.com/@vue/reactivity@3.0.5/dist/reactivity.global.js"></script>
+<script>
+  const { effect, ref } = VueReactivity
+
+  function createRenderer() {
+    // n1: old vnode
+    // n2: new vnode
+    // container
+    function patch(n1, n2, container) {
+
+    }
+
+    function render(vnode, container) {
+      if (vnode) {
+        // patch
+        patch(container._vnode, vnode, container)
+      } else {
+        if (container._vnode) {
+          // unmount
+          container.innerHTML = ''
+        }
+      }
+      container._vnode = vnode
+    }
+
+    return {
+      render,
+      patch
+    }
+  }
+  const renderer = createRenderer() // renderer has ability to render and patch, etc.
+  
+  renderer.render(vnode1, document.getElementById('#app')) // mount
+  renderer.render(vnode2, document.getElementById('#app')) // update
+  renderer.render(null, document.getElementById('#app')) // unmount
+</script>
