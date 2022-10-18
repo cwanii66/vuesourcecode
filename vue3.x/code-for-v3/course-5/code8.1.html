@@ -33,8 +33,20 @@
     }
     function mountElement(vnode, container) {
       const el = createElement(vnode.tag)
+      // props
+      if (vnode.props) {
+        const props = vnode.props
+        for (const key in props) {
+          el.setAttribute(key, props[key])
+        }
+      }
+
       if (typeof vnode.children === 'string') {
         setElementText(el, vnode.children)
+      } else if (Array.isArray(vnode.children)) {
+        vnode.children.forEach(child => {
+          patch(null, child, el)
+        })
       }
       insert(el, container)
     }
@@ -59,25 +71,27 @@
   const renderer = createRenderer({
     createElement(tag) {
       console.log(`create element ${tag}`)
-      // return document.createElement(tag)
-      return {
-        tag
-      }
+      return document.createElement(tag)
+      // return {
+      //   tag
+      // }
     },
     setElementText(el, text) {
       console.log(`set ${JSON.stringify(el)} text content: ${text}`)
-      // el.textContent = text
-      el.text = text
+      el.textContent = text
+      // el.text = text
     },
     insert(el, parent, anchor = null) {
       console.log(`insert ${JSON.stringify(el)} to ${JSON.stringify(parent)}`)
-      // parent.insertBefore(el, anchor)
-      parent.children = el
+      parent.insertBefore(el, anchor)
+      // parent.children = el
     }
   }) // renderer has ability to render and patch, etc.
 
-  const vnode1 = h('main', 'main text', null)
-  const vnode2 = h('h1', 'h1 text', null)
+  const vnode1 = h('main', [
+    h('p', 'hello', { style: 'color:red' })
+  ], { style: 'font-weight:light' })
+  // const vnode2 = h('h1', 'h1 text', { style: 'color:green' })
   renderer.render(vnode1, document.getElementById('app')) // mount
   // renderer.render(vnode2, document.getElementById('#app')) // update
   // renderer.render(null, document.getElementById('app')) // unmount
