@@ -17,6 +17,7 @@
     const {
       createElement,
       setElementText,
+      patchProps,
       insert
     } = backend
 
@@ -31,13 +32,16 @@
         // n1 exists --> means new vnode should be patched
       }
     }
+    function shouldSetAsProps(el, key, value) {
+      if (key === 'form' && el.tagName === 'INPUT') return false
+      return key in el
+    }
     function mountElement(vnode, container) {
       const el = createElement(vnode.tag)
       // props
       if (vnode.props) {
-        const props = vnode.props
-        for (const key in props) {
-          el.setAttribute(key, props[key])
+        for (const key in vnode.props) {
+          patchProps(el, key, null, vnode.props[key])
         }
       }
 
@@ -68,7 +72,7 @@
     }
   }
 
-  const renderer = createRenderer({
+  const nodeOpts = {
     createElement(tag) {
       console.log(`create element ${tag}`)
       return document.createElement(tag)
@@ -85,8 +89,22 @@
       console.log(`insert ${JSON.stringify(el)} to ${JSON.stringify(parent)}`)
       parent.insertBefore(el, anchor)
       // parent.children = el
+    },
+    patchProps(el, key, prevValue, nextValue) {
+      if (shouldSetAsProps(el, key, nextValue)) {
+        const type = typeof el[key]
+        if (type === 'boolean' && nextValue === '') {
+          el[key] = true
+        } else {
+          el[key] = nextValue
+        }
+      } else {
+        el.setAttribute(key, nextValue)
+      }
     }
-  }) // renderer has ability to render and patch, etc.
+  }
+
+  const renderer = createRenderer(nodeOpts) // renderer has ability to render and patch, etc.
 
   const vnode1 = h('main', [
     h('p', 'hello', { style: 'color:red' })
