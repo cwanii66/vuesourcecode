@@ -1,0 +1,131 @@
+<body>
+  <div id="app"></div>
+</body>
+
+<script src="https://unpkg.com/@vue/reactivity@3.0.5/dist/reactivity.global.js"></script>
+<script>
+  const { effect, ref } = VueReactivity
+  function h(tag, children, props) {
+    return {
+      tag,
+      children,
+      props
+    }
+  }
+  function createRenderer(backend) {
+
+    const {
+      createElement,
+      setElementText,
+      patchProps,
+      insert
+    } = backend
+
+    // n1: old vnode
+    // n2: new vnode
+    // container
+    function patch(n1, n2, container) {
+      // initially mount
+      if (!n1) {
+        mountElement(n2, container)
+      } else {
+        // n1 exists --> means new vnode should be patched
+      }
+    }
+
+    function mountElement(vnode, container) {
+      const el = vnode.el = createElement(vnode.tag)
+
+      // children
+      if (typeof vnode.children === 'string') {
+        setElementText(el, vnode.children)
+      } else if (Array.isArray(vnode.children)) {
+        vnode.children.forEach(child => {
+          patch(null, child, el)
+        })
+      }
+
+      // props
+      if (vnode.props) {
+        for (const key in vnode.props) {
+          patchProps(el, key, null, vnode.props[key])
+        }
+      }
+
+      insert(el, container)
+    }
+
+    function unmount(vnode) {
+      // 我们总是需要的到父节点的引用
+      const parent = vnode.el.parentNode
+      if (parent) parent.removeChild(vnode.el)
+    }
+    function render(vnode, container) {
+      if (vnode) {
+        // patch
+        patch(container?._vnode, vnode, container)
+      } else {
+        if (container._vnode) {
+          // unmount
+          unmount(container._vnode)
+        }
+      }
+      container._vnode = vnode
+    }
+
+    return {
+      render
+    }
+  }
+
+  const nodeOpts = {
+    createElement(tag) {
+      console.log(`create element ${tag}`)
+      return document.createElement(tag)
+      // return {
+      //   tag
+      // }
+    },
+    setElementText(el, text) {
+      console.log(`set ${JSON.stringify(el)} text content: ${text}`)
+      el.textContent = text
+      // el.text = text
+    },
+    insert(el, parent, anchor = null) {
+      console.log(`insert ${JSON.stringify(el)} to ${JSON.stringify(parent)}`)
+      parent.insertBefore(el, anchor)
+      // parent.children = el
+    },
+    patchProps: (function () {
+      function shouldSetAsProps(el, key, value) {
+        if (key === 'form' && el.tagName === 'INPUT') return false
+        return key in el
+      }
+      return function (el, key, prevValue, nextValue) {
+        if (key === 'class') {
+          el.className = nextValue || ''
+        } else if (shouldSetAsProps(el, key, nextValue)) {
+          const type = typeof el[key]
+          if (type === 'boolean' && nextValue === '') {
+            el[key] = true
+          } else {
+            el[key] = nextValue
+          }
+        } else {
+          el.setAttribute(key, nextValue)
+        }
+      }
+
+    })()
+  }
+
+  const renderer = createRenderer(nodeOpts) // renderer has ability to render and patch, etc.
+
+  const vnode1 = h('main', [
+    h('p', 'hello', { style: 'color:red' })
+  ], { style: 'font-weight:light' })
+  // const vnode2 = h('h1', 'h1 text', { style: 'color:green' })
+  renderer.render(vnode1, document.getElementById('app')) // mount
+  // renderer.render(vnode2, document.getElementById('#app')) // update
+  renderer.render(null, document.getElementById('app')) // unmount
+</script>
