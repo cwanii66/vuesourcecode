@@ -117,8 +117,35 @@
         if (key === 'form' && el.tagName === 'INPUT') return false
         return key in el
       }
+      function handleEvent(el, eventName, eventCb) {
+        el.addEventListener(eventName, eventCb)
+      }
       return function (el, key, prevValue, nextValue) {
-        if (key === 'class') {
+        if (/^on/.test(key)) {
+          // 伪造事件处理函数，把真正的事件处理函数设置为invoker.value属性的值
+          // 更新事件时只需要更新invoker.value的值即可
+          const invokers = el._vei || (el._vei = {})
+          let invoker = invokers[key]
+          
+          const name = key.slice(2).toLowerCase()
+          if (nextValue) {
+            if (!invoker) {
+              invoker = el._vei[key] = e => {
+                if (Array.isArray(invoker.value)) {
+                  invoker.value.forEach(fn => fn(e))
+                } else {
+                  invoker.value(e)
+                }
+              }
+              invoker.value = nextValue
+              handleEvent(el, name, invoker)
+            } else {
+              invoker.value = nextValue
+            }
+          } else if (invoker) {
+            el.removeEventListener(name, invoker)
+          }
+        } else if (key === 'class') {
           el.className = nextValue || ''
         } else if (shouldSetAsProps(el, key, nextValue)) {
           const type = typeof el[key]
@@ -137,11 +164,14 @@
 
   const renderer = createRenderer(nodeOpts) // renderer has ability to render and patch, etc.
 
-  const vnode1 = h('main', [
-    h('p', 'hello', { style: 'color:red' })
-  ], { style: 'font-weight:light' })
+  const vnode1 = h('main', 'children', {
+    onClick:[ 
+      () => alert('clicked...'),
+      () => console.log('clicked...')
+    ]
+  })
   // const vnode2 = h('h1', 'h1 text', { style: 'color:green' })
   renderer.render(vnode1, document.getElementById('app')) // mount
   // renderer.render(vnode2, document.getElementById('#app')) // update
-  renderer.render(null, document.getElementById('app')) // unmount
+  // renderer.render(null, document.getElementById('app')) // unmount
 </script>
