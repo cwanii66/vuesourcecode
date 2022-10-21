@@ -2,7 +2,7 @@
   <div id="app"></div>
 </body>
 
-<script src="https://unpkg.com/@vue/reactivity@3.2.0/dist/reactivity.global.js"></script>
+<script src="https://unpkg.com/@vue/reactivity@3.0.5/dist/reactivity.global.js"></script>
 <script>
   function h(type, children, props) {
     return {
@@ -38,7 +38,7 @@
           mountElement(n2, container)
         } else {
           // update
-          // patchElement(n1, n2)
+          patchElement(n1, n2)
         }
       } else if (typeof type === 'object') {
         // n2.type类型是对象，则它描述的是组件
@@ -48,8 +48,33 @@
 
     }
 
+    function patchElement(n1, n2) {
+      const el = n2.el = n1.el
+      const oldProps = n1.props
+      const newProps = n2.props
+
+      for (const key in newProps) {
+        if (newProps[key] !== oldProps[key]) {
+          oldProps[key] = newProps[key]
+          patchProps(el, key, oldProps[key], newProps[key])
+        }
+      }
+      for (const key in oldProps) {
+        if (!(key in newProps)) {
+          patchProps(el, key, oldProps[key], null)
+        }
+      }
+    }
+
     function mountElement(vnode, container) {
       const el = vnode.el = createElement(vnode.type)
+
+      // props
+      if (vnode.props) {
+        for (const key in vnode.props) {
+          patchProps(el, key, null, vnode.props[key])
+        }
+      }
 
       // children
       if (typeof vnode.children === 'string') {
@@ -58,13 +83,6 @@
         vnode.children.forEach(child => {
           patch(null, child, el)
         })
-      }
-
-      // props
-      if (vnode.props) {
-        for (const key in vnode.props) {
-          patchProps(el, key, null, vnode.props[key])
-        }
       }
 
       insert(el, container)
@@ -95,29 +113,18 @@
 
   const nodeOpts = {
     createElement(type) {
-      console.log(`create element ${type}`)
       return document.createElement(type)
-      // return {
-      //   type
-      // }
     },
     setElementText(el, text) {
-      console.log(`set ${JSON.stringify(el)} text content: ${text}`)
       el.textContent = text
-      // el.text = text
     },
     insert(el, parent, anchor = null) {
-      console.log(`insert ${JSON.stringify(el)} to ${JSON.stringify(parent)}`)
       parent.insertBefore(el, anchor)
-      // parent.children = el
     },
     patchProps: (function () {
       function shouldSetAsProps(el, key, value) {
         if (key === 'form' && el.tagName === 'INPUT') return false
         return key in el
-      }
-      function handleEvent(el, eventName, eventCb) {
-        el.addEventListener(eventName, eventCb)
       }
       return function (el, key, prevValue, nextValue) {
         if (/^on/.test(key)) {
@@ -130,7 +137,9 @@
           if (nextValue) {
             if (!invoker) {
               invoker = el._vei[key] = e => {
-                if (e.timeStamp < invoker.attached) return
+                console.log(e.timeStamp)
+                console.log(invoker.attached)
+                if (invoker.attached > e.timeStamp) return
                 if (Array.isArray(invoker.value)) {
                   invoker.value.forEach(fn => fn(e))
                 } else {
@@ -138,8 +147,8 @@
                 }
               }
               invoker.value = nextValue
-              invoker.attached = performance.now()
-              handleEvent(el, name, invoker)
+              invoker.attached = performance.now() // record event-bind time
+              el.addEventListener(name, invoker)
             } else {
               invoker.value = nextValue
             }
@@ -175,7 +184,7 @@
       props: bol.value ? {
         onClick: () => {
           alert('parent element is clicked...')
-        }
+        },
       } : {},
       children: [
         {
