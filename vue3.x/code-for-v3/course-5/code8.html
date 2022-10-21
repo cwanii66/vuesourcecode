@@ -1,0 +1,195 @@
+<body>
+  <div id="app"></div>
+</body>
+
+<script src="https://unpkg.com/@vue/reactivity@3.2.0/dist/reactivity.global.js"></script>
+<script>
+  function h(type, children, props) {
+    return {
+      type,
+      children,
+      props
+    }
+  }
+  function createRenderer(backend) {
+
+    const {
+      createElement,
+      setElementText,
+      patchProps,
+      insert
+    } = backend
+
+    // n1: old vnode
+    // n2: new vnode
+    // container
+    function patch(n1, n2, container) {
+      if (n1 && n1.type !== n2.type) {
+        // 如果新旧vnode的类型不同，那么就不存在patch的概念，直接将旧vnode卸载
+        unmount(n1)
+        n1 = null
+      }
+      // now, n1 和 n2所描述的内容相同
+      const { type } = n2
+      // 字符串：则它描述的是普通标签元素
+      if (typeof type === 'string') {
+        // initially mount
+        if (!n1) {
+          mountElement(n2, container)
+        } else {
+          // update
+          // patchElement(n1, n2)
+        }
+      } else if (typeof type === 'object') {
+        // n2.type类型是对象，则它描述的是组件
+      } else if (typeof type === '***') {
+        // 处理其他类型的vnode
+      }
+
+    }
+
+    function mountElement(vnode, container) {
+      const el = vnode.el = createElement(vnode.type)
+
+      // children
+      if (typeof vnode.children === 'string') {
+        setElementText(el, vnode.children)
+      } else if (Array.isArray(vnode.children)) {
+        vnode.children.forEach(child => {
+          patch(null, child, el)
+        })
+      }
+
+      // props
+      if (vnode.props) {
+        for (const key in vnode.props) {
+          patchProps(el, key, null, vnode.props[key])
+        }
+      }
+
+      insert(el, container)
+    }
+
+    function unmount(vnode) {
+      // 我们总是需要的到父节点的引用
+      const parent = vnode.el.parentNode
+      if (parent) parent.removeChild(vnode.el)
+    }
+    function render(vnode, container) {
+      if (vnode) {
+        // patch
+        patch(container?._vnode, vnode, container)
+      } else {
+        if (container._vnode) {
+          // unmount
+          unmount(container._vnode)
+        }
+      }
+      container._vnode = vnode
+    }
+
+    return {
+      render
+    }
+  }
+
+  const nodeOpts = {
+    createElement(type) {
+      console.log(`create element ${type}`)
+      return document.createElement(type)
+      // return {
+      //   type
+      // }
+    },
+    setElementText(el, text) {
+      console.log(`set ${JSON.stringify(el)} text content: ${text}`)
+      el.textContent = text
+      // el.text = text
+    },
+    insert(el, parent, anchor = null) {
+      console.log(`insert ${JSON.stringify(el)} to ${JSON.stringify(parent)}`)
+      parent.insertBefore(el, anchor)
+      // parent.children = el
+    },
+    patchProps: (function () {
+      function shouldSetAsProps(el, key, value) {
+        if (key === 'form' && el.tagName === 'INPUT') return false
+        return key in el
+      }
+      function handleEvent(el, eventName, eventCb) {
+        el.addEventListener(eventName, eventCb)
+      }
+      return function (el, key, prevValue, nextValue) {
+        if (/^on/.test(key)) {
+          // 伪造事件处理函数，把真正的事件处理函数设置为invoker.value属性的值
+          // 更新事件时只需要更新invoker.value的值即可
+          const invokers = el._vei || (el._vei = {})
+          let invoker = invokers[key]
+
+          const name = key.slice(2).toLowerCase()
+          if (nextValue) {
+            if (!invoker) {
+              invoker = el._vei[key] = e => {
+                if (e.timeStamp < invoker.attached) return
+                if (Array.isArray(invoker.value)) {
+                  invoker.value.forEach(fn => fn(e))
+                } else {
+                  invoker.value(e)
+                }
+              }
+              invoker.value = nextValue
+              invoker.attached = performance.now()
+              handleEvent(el, name, invoker)
+            } else {
+              invoker.value = nextValue
+            }
+          } else if (invoker) {
+            el.removeEventListener(name, invoker)
+          }
+        } else if (key === 'class') {
+          el.className = nextValue || ''
+        } else if (shouldSetAsProps(el, key, nextValue)) {
+          const type = typeof el[key]
+          if (type === 'boolean' && nextValue === '') {
+            el[key] = true
+          } else {
+            el[key] = nextValue
+          }
+        } else {
+          el.setAttribute(key, nextValue)
+        }
+      }
+
+    })()
+  }
+
+  const renderer = createRenderer(nodeOpts) // renderer has ability to render and patch, etc.
+
+
+  const { effect, ref } = VueReactivity
+  const bol = ref(false)
+
+  effect(() => {
+    const vnode = {
+      type: 'div',
+      props: bol.value ? {
+        onClick: () => {
+          alert('parent element is clicked...')
+        }
+      } : {},
+      children: [
+        {
+          type: 'p',
+          props: {
+            onClick: () => {
+              bol.value = true
+            }
+          },
+          children: 'text'
+        },
+      ]
+    }
+    renderer.render(vnode, document.querySelector('#app'))
+  })
+
+</script>
