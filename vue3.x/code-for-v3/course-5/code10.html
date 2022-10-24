@@ -52,13 +52,19 @@
             setText(el, n2.children)
           }
         }
+      } else if (type === Fragment) {
+        if (!n1) {
+          n2.children.forEach(c => patch(null, c, container))
+        } else {
+          // 旧vnode存在，更新Fragment的children
+          patchChildren(n1, n2, container)
+        }
       }
       else if (typeof type === 'object') {
         // n2.type类型是对象，则它描述的是组件
       } else if (typeof type === '***') {
         // 处理其他类型的vnode
       }
-
     }
 
     function patchElement(n1, n2) {
@@ -132,6 +138,14 @@
     }
 
     function unmount(vnode) {
+      // Fragment
+      if (vnode.type === Fragment) {
+        vnode.children.forEach(c => {
+          unmount(c)
+        })
+        return
+      }
+
       // 我们总是需要的到父节点的引用
       const parent = vnode.el.parentNode
       if (parent) parent.removeChild(vnode.el)
@@ -238,6 +252,20 @@
     children: 'I\'m comment content'
   }
 
+  const Fragment = Symbol.for('fragment')
+  const vnode3 = {
+    type: 'ul',
+    children: [
+      {
+        type: Fragment,
+        children: [
+          { type: 'li', children: '1' },
+          { type: 'li', children: '2' },
+          { type: 'li', children: '3' },
+        ]
+      }
+    ]
+  }
 
   
 
