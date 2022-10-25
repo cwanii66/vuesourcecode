@@ -108,14 +108,56 @@
       const componentOptions = vnode.type
       const {
         data,
-        render
+        render,
+        /* lifecycle hooks */
+        beforeCreate,
+        created,
+        beforeMount,
+        mounted,
+        beforeUpdate,
+        updated,
+        /* --------------- */
+
       } = componentOptions
+
+      // beforeCreate
+      beforeCreate && beforeCreate()
 
       const state = reactive(data())
 
+      // 定义组件实例
+      const instance = {
+        state,
+        isMounted: false,
+        subTree: null
+      }
+      vnode.component = instance // 将组件实例设置到vnode上，用于后续更新
+
+      // created
+      created && created.call(state)
+
       effect(() => {
         const subTree = render.call(state)
-        patch(null, subTree, container, anchor)
+        
+        if (!instance.isMounted) {
+          // beforeMount
+          beforeMount && beforeMount.call(state)
+          // initial mount
+          patch(null, subTree, container, anchor)
+          instance.isMounted = true
+          // mounted
+          mounted && mounted.call(state)
+        } else {
+          // beforeUpdate
+          beforeUpdate && beforeUpdate.call(state)
+
+          // isMounted: true ==> update
+          patch(instance.subTree, subTree, container, anchor)
+
+          // updated
+          updated && updated.call(state)
+        }
+        instance.subTree = subTree // 更新组件实例的子树
       }, {
         // 指定该副作用函数的调度器为queueJob
         scheduler: queueJob
@@ -255,11 +297,23 @@
     render() {
       return {
         type: 'h1',
-        props: {
+        props: { 
           onClick: () => this.foo++
         },
         children: `foo: ${this.foo}`
       }
+    },
+    beforeCreate() {
+      console.log('beforeCreate')
+    },
+    created() {
+      console.log('created')
+    },
+    beforeMount() {
+      console.log('beforeMount')
+    },
+    mounted() {
+      console.log('mounted')
     }
   }
   const vnode1 = {
