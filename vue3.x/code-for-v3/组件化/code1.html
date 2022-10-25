@@ -2,7 +2,7 @@
 
 <script src="https://unpkg.com/@vue/reactivity@3.0.5/dist/reactivity.global.js"></script>
 <script>
-  const { reactive, effect } = VueReactivity
+  const { reactive, effect, shallowReactive } = VueReactivity
 
 
   function createRenderer(options) {
@@ -109,6 +109,7 @@
       const {
         data,
         render,
+        props: propsOption,
         /* lifecycle hooks */
         beforeCreate,
         created,
@@ -125,43 +126,122 @@
 
       const state = reactive(data())
 
+      const [ props, attrs ] = resolveProps(propsOption, vnode.props)
+
       // 定义组件实例
       const instance = {
         state,
+        // props数据包装成shallowReactive并定义到组件实例上
+        props: shallowReactive(props),
         isMounted: false,
         subTree: null
       }
       vnode.component = instance // 将组件实例设置到vnode上，用于后续更新
 
+      // 创建渲染上下文对象，本质上是组件实例的代理
+      const renderContext = new Proxy(instance, {
+        // state & props 的场景
+        get(t, k, r) {
+          const { state, props } = t
+          if (state && k in state) {
+            return state[k]
+          } else if (k in props) { // 如果组件自身没有该数据, 则尝试从props中读取
+            return props[k]
+          } else {
+            console.error('render Context: ' + k + ' doesn\'t exist')
+          }
+        },
+        set(t, k, v, r) {
+          const { state, props } = t
+          if (state && k in state) {
+            state[k] = v
+          } else if (k in props) {
+            props[k] = v
+          } else {
+            console.error('render Context: ' + k + ' doesn\'t exist')
+          }
+        }
+      })
+
       // created
-      created && created.call(state)
+      created && created.call(renderContext)
 
       effect(() => {
-        const subTree = render.call(state)
+        const subTree = render.call(renderContext)
         
         if (!instance.isMounted) {
           // beforeMount
-          beforeMount && beforeMount.call(state)
+          beforeMount && beforeMount.call(renderContext)
           // initial mount
           patch(null, subTree, container, anchor)
           instance.isMounted = true
           // mounted
-          mounted && mounted.call(state)
+          mounted && mounted.call(renderContext)
         } else {
           // beforeUpdate
-          beforeUpdate && beforeUpdate.call(state)
+          beforeUpdate && beforeUpdate.call(renderContext)
 
           // isMounted: true ==> update
           patch(instance.subTree, subTree, container, anchor)
 
           // updated
-          updated && updated.call(state)
+          updated && updated.call(renderContext)
         }
         instance.subTree = subTree // 更新组件实例的子树
       }, {
         // 指定该副作用函数的调度器为queueJob
         scheduler: queueJob
       })
+    }
+    function resolveProps(options, propsData) {
+      const props = {}
+      const attrs = {}
+      for (const key in propsData) {
+        if (key in options) {
+          // 如果给组件传递的props没有在自身的props选项中声明，则该组件props合法
+          // 否则将其视为attrs
+          props[key] = propsData[key]
+        } else {
+          attrs[key] = propsData[key]
+        }
+      }
+      return [
+        props,
+        attrs
+      ]
+    }
+
+    function patchComponent(n1, n2, anchor) {
+      const instance = n2.component = n1.component
+      const { props } = instance
+
+      if (hasPropsChanged(n1.props, n2.props)) {
+        const [ nextProps ] = resolveProps(n2.type.props, n2.props)
+        // 更新props
+        for (const key in nextProps) {
+          props[key] = nextProps[key]
+        }
+        // 删除不存在的props
+        for (const k in props) {
+          if (!(k in nextProps)) delete props[k]
+        }
+      }
+    }
+    // props 变动改变了吗？简单实现
+    function hasPropsChanged(
+      prevProps,
+      nextProps
+    ) {
+      const nextKeys = Object.keys(nextProps)
+      const prevKeys = Object.keys(prevProps)
+      if (nextKeys.length !== prevKeys.length) {
+        return true
+      }
+      for (let i = 0; i < nextKeys.length; i++) {
+        const key = nextKeys[i]
+        if (nextProps[key] !== prevProps[key]) return true
+      }
+      return false
     }
 
     function patch(n1, n2, container, anchor) {
@@ -201,7 +281,7 @@
         if (!n1) {
           mountComponent(n2, container, anchor)
         } else {
-          // patchComponent(n1, n2, anchor)
+          patchComponent(n1, n2, anchor)
         }
       }
     }
@@ -289,6 +369,9 @@
   // MyComponent --> user interface
   const MyComponent = {
     name: 'MyComponent',
+    props: {
+      title: 'default title'
+    },
     data() {
       return {
         foo: 1
@@ -298,9 +381,12 @@
       return {
         type: 'h1',
         props: { 
-          onClick: () => this.foo++
+          onClick: [
+            () => this.foo++,
+            () => this.title = 'man should be healthy'
+          ]
         },
-        children: `foo: ${this.foo}`
+        children: `foo: ${this.foo} --- bar: ${this.title}`
       }
     },
     beforeCreate() {
@@ -317,7 +403,10 @@
     }
   }
   const vnode1 = {
-    type: MyComponent
+    type: MyComponent,
+    props: {
+      title: 'Be healthy is important'
+    }
   }
 
   renderer.render(vnode1, document.querySelector('#app'))
