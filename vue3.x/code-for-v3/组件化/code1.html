@@ -2,7 +2,7 @@
 
 <script src="https://unpkg.com/@vue/reactivity@3.0.5/dist/reactivity.global.js"></script>
 <script>
-  const { reactive, effect, shallowReactive, ref, shallowReadonly } = VueReactivity
+  const { reactive, effect, shallowReactive, ref, shallowReadonly, unref } = VueReactivity
 
 
   function createRenderer(options) {
@@ -144,12 +144,14 @@
         // ...
       }
       const setupResult = setup(shallowReadonly(instance.props), setupContext)
-      let setupState = null
+      let setupState = {}
       if (typeof setupResult === 'function') {
         if (render) console.error('setup 函数返回渲染函数, render选项将被忽略')
         render = setupResult
       } else {
-        setupState = setupResult
+        for (const key of Object.keys(setupResult)) {
+          if (setupResult[key]?.__v_isRef) setupState[key] = unref(setupResult[key])
+        }
       }
 
       vnode.component = instance // 将组件实例设置到vnode上，用于后续更新
@@ -409,12 +411,11 @@
     },
     render() {
       return {
-        type: 'Fragmennt',
+        type: 'div',
         props: null,
-        children: [
-          `foo: ${this.foo} --- bar: ${this.title}`,
-          `count: ${this.count}`
-        ]
+        children: 
+          `foo: ${this.foo} --- bar: ${this.title}
+            \n count: ${this.count}`
       }
     },
     beforeCreate() {
