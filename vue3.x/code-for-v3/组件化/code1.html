@@ -138,9 +138,23 @@
         subTree: null
       }
 
+      // 定义emit函数
+      // event: event name
+      // payload: passed args
+      function emit(event, ...payload) {
+        const eventName = `on${event[0].toUpperCase() + event.slice(1)}`
+        const handler = instance.props[eventName]
+        if (handler) {
+          handler(...payload)
+        } else {
+          console.error('事件不存在')
+        }
+      }
+
       // setupContext
       const setupContext = { 
         attrs,
+        emit,
         // ...
       }
       const setupResult = setup(shallowReadonly(instance.props), setupContext)
@@ -219,7 +233,8 @@
       const props = {}
       const attrs = {}
       for (const key in propsData) {
-        if (key in options) {
+        // 以字符串on开头的props,无论是否显式声明，都将其添加到props数据中，而非attrs
+        if (key in options || key.startsWith('on')) {
           // 如果给组件传递的props没有在自身的props选项中声明，则该组件props合法
           // 否则将其视为attrs
           props[key] = propsData[key]
@@ -400,6 +415,8 @@
       // 2. return an object for render context
       const count = ref(0)
       const { slots, emit, attrs, expose } = setupContext
+
+      emit('change', 1, 2)
       return {
         count
       }
@@ -434,7 +451,8 @@
   const vnode1 = {
     type: MyComponent,
     props: {
-      title: 'Be healthy is important'
+      title: 'Be healthy is important',
+      onChange: (...payload) => { console.log(payload) }
     }
   }
 
