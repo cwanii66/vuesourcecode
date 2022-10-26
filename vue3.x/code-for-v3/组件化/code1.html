@@ -109,7 +109,7 @@
       const {
         data,
         props: propsOption,
-        
+
         /* lifecycle hooks */
         beforeCreate,
         created,
@@ -128,7 +128,7 @@
 
       const state = reactive(data())
 
-      const [ props, attrs ] = resolveProps(propsOption, vnode.props)
+      const [props, attrs] = resolveProps(propsOption, vnode.props)
 
       const slots = vnode.children || {}
       // 定义组件实例
@@ -139,6 +139,7 @@
         isMounted: false,
         subTree: null,
         slots,
+        // mounted 数组
       }
 
       // 定义emit函数
@@ -154,7 +155,7 @@
         }
       }
       // setupContext
-      const setupContext = { 
+      const setupContext = {
         attrs,
         emit,
         slots,
@@ -163,7 +164,7 @@
       const setupResult = setup(shallowReadonly(instance.props), setupContext)
       let setupState = {}
       if (typeof setupResult === 'function') {
-        if (render) console.error('setup 函数返回渲染函数, render选项将被忽略')   
+        if (render) console.error('setup 函数返回渲染函数, render选项将被忽略')
         render = setupResult
       } else {
         for (const key of Object.keys(setupResult)) {
@@ -210,7 +211,7 @@
 
       effect(() => {
         const subTree = render.call(renderContext)
-        
+
         if (!instance.isMounted) {
           // beforeMount
           beforeMount && beforeMount.call(renderContext)
@@ -259,7 +260,7 @@
       const { props } = instance
 
       if (hasPropsChanged(n1.props, n2.props)) {
-        const [ nextProps ] = resolveProps(n2.type.props, n2.props)
+        const [nextProps] = resolveProps(n2.type.props, n2.props)
         // 更新props
         for (const key in nextProps) {
           props[key] = nextProps[key]
@@ -417,26 +418,30 @@
     },
     setup(props, setupContext) {
       // 1. return a function as render function
-          // render function should return a normalized vnode
+      // render function should return a normalized vnode
       // 2. return an object for render context
       const count = ref(0)
       const { slots, emit, attrs, expose } = setupContext
 
       emit('change', 1, 2)
-      return () => [
-        {
-          type: 'header',
-          children: [slots.header()]
-        },
-        {
-          type: 'div',
-          children: [slots.body()]
-        },
-        {
-          type: 'footer',
-          children: [slots.footer()]
-        }
-      ]
+      return () => ({
+        type: 'main',
+        props: null,
+        children: [
+          {
+            type: 'header',
+            children: [slots.header({ count: unref(count) })]
+          },
+          {
+            type: 'div',
+            children: [slots.body()]
+          },
+          {
+            type: 'footer',
+            children: [slots.footer()]
+          }
+        ]
+      })
     },
     data() {
       return {
@@ -463,9 +468,9 @@
       onChange: (...payload) => { console.log(payload) }
     },
     children: {
-      header: () => ({
+      header: (slotProps) => ({
         type: 'h1',
-        children: 'title'
+        children: `title ${slotProps.count}`
       }),
       body() {
         return {
