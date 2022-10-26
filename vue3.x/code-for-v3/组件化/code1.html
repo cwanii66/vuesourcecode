@@ -2,7 +2,7 @@
 
 <script src="https://unpkg.com/@vue/reactivity@3.0.5/dist/reactivity.global.js"></script>
 <script>
-  const { reactive, effect, shallowReactive } = VueReactivity
+  const { reactive, effect, shallowReactive, ref, shallowReadonly } = VueReactivity
 
 
   function createRenderer(options) {
@@ -118,6 +118,7 @@
         beforeUpdate,
         updated,
         /* --------------- */
+        setup
 
       } = componentOptions
 
@@ -136,6 +137,21 @@
         isMounted: false,
         subTree: null
       }
+
+      // setupContext
+      const setupContext = { 
+        attrs,
+        // ...
+      }
+      const setupResult = setup(shallowReadonly(instance.props), setupContext)
+      let setupState = null
+      if (typeof setupResult === 'function') {
+        if (render) console.error('setup 函数返回渲染函数, render选项将被忽略')
+        render = setupResult
+      } else {
+        setupState = setupResult
+      }
+
       vnode.component = instance // 将组件实例设置到vnode上，用于后续更新
 
       // 创建渲染上下文对象，本质上是组件实例的代理
@@ -372,6 +388,16 @@
     props: {
       title: 'default title'
     },
+    setup(props, setupContext) {
+      // 1. return a function as render function
+          // render function should return a normalized vnode
+      // 2. return an object for render context
+      const count = ref(0)
+      const { slots, emit, attrs, expose } = setupContext
+      return {
+        count
+      }
+    },
     data() {
       return {
         foo: 1
@@ -379,14 +405,12 @@
     },
     render() {
       return {
-        type: 'h1',
-        props: { 
-          onClick: [
-            () => this.foo++,
-            () => this.title = 'man should be healthy'
-          ]
-        },
-        children: `foo: ${this.foo} --- bar: ${this.title}`
+        type: 'Fragmennt',
+        props: null,
+        children: [
+          `foo: ${this.foo} --- bar: ${this.title}`,
+          `count: ${this.count}`
+        ]
       }
     },
     beforeCreate() {
