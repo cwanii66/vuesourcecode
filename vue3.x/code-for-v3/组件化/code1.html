@@ -163,6 +163,8 @@
             return state[k]
           } else if (k in props) { // 如果组件自身没有该数据, 则尝试从props中读取
             return props[k]
+          } else if (setupState && k in setupState) {
+            return setupState[k]
           } else {
             console.error('render Context: ' + k + ' doesn\'t exist')
           }
@@ -173,6 +175,8 @@
             state[k] = v
           } else if (k in props) {
             props[k] = v
+          } else if (setupState && k in setupState) {
+            setupState[k] = v
           } else {
             console.error('render Context: ' + k + ' doesn\'t exist')
           }
