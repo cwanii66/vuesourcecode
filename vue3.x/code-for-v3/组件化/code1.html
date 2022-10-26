@@ -108,8 +108,8 @@
       const componentOptions = vnode.type
       const {
         data,
-        render,
         props: propsOption,
+        
         /* lifecycle hooks */
         beforeCreate,
         created,
@@ -121,6 +121,7 @@
         setup
 
       } = componentOptions
+      let render = componentOptions?.render
 
       // beforeCreate
       beforeCreate && beforeCreate()
@@ -129,13 +130,15 @@
 
       const [ props, attrs ] = resolveProps(propsOption, vnode.props)
 
+      const slots = vnode.children || {}
       // 定义组件实例
       const instance = {
         state,
         // props数据包装成shallowReactive并定义到组件实例上
         props: shallowReactive(props),
         isMounted: false,
-        subTree: null
+        subTree: null,
+        slots,
       }
 
       // 定义emit函数
@@ -150,17 +153,17 @@
           console.error('事件不存在')
         }
       }
-
       // setupContext
       const setupContext = { 
         attrs,
         emit,
+        slots,
         // ...
       }
       const setupResult = setup(shallowReadonly(instance.props), setupContext)
       let setupState = {}
       if (typeof setupResult === 'function') {
-        if (render) console.error('setup 函数返回渲染函数, render选项将被忽略')
+        if (render) console.error('setup 函数返回渲染函数, render选项将被忽略')   
         render = setupResult
       } else {
         for (const key of Object.keys(setupResult)) {
@@ -174,7 +177,10 @@
       const renderContext = new Proxy(instance, {
         // state & props 的场景
         get(t, k, r) {
-          const { state, props } = t
+          const { state, props, slots } = t
+          // 当访问实例$slots时，实际上就是访问MyComponent的children对象slots
+          if (k === '$slots') return slots
+
           if (state && k in state) {
             return state[k]
           } else if (k in props) { // 如果组件自身没有该数据, 则尝试从props中读取
@@ -417,22 +423,24 @@
       const { slots, emit, attrs, expose } = setupContext
 
       emit('change', 1, 2)
-      return {
-        count
-      }
+      return () => [
+        {
+          type: 'header',
+          children: [slots.header()]
+        },
+        {
+          type: 'div',
+          children: [slots.body()]
+        },
+        {
+          type: 'footer',
+          children: [slots.footer()]
+        }
+      ]
     },
     data() {
       return {
         foo: 1
-      }
-    },
-    render() {
-      return {
-        type: 'div',
-        props: null,
-        children: 
-          `foo: ${this.foo} --- bar: ${this.title}
-            \n count: ${this.count}`
       }
     },
     beforeCreate() {
@@ -453,6 +461,24 @@
     props: {
       title: 'Be healthy is important',
       onChange: (...payload) => { console.log(payload) }
+    },
+    children: {
+      header: () => ({
+        type: 'h1',
+        children: 'title'
+      }),
+      body() {
+        return {
+          type: 'section',
+          children: 'content',
+        }
+      },
+      footer: () => {
+        return {
+          type: 'p',
+          children: 'footer'
+        }
+      }
     }
   }
 
