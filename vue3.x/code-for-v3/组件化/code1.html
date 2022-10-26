@@ -5,6 +5,15 @@
   const { reactive, effect, shallowReactive, ref, shallowReadonly, unref } = VueReactivity
 
 
+  let currentInstance = null
+  function setCurrentInstance(instance) {
+    currentInstance = instance
+  }
+  function onMounted(fn) {
+    if (currentInstance) currentInstance.mounted.push(fn)
+    else console.error('onMounted 函数只能在setup函数中调用')
+  }
+
   function createRenderer(options) {
 
     const {
@@ -140,6 +149,7 @@
         subTree: null,
         slots,
         // mounted 数组
+        mounted: []
       }
 
       // 定义emit函数
@@ -161,7 +171,12 @@
         slots,
         // ...
       }
+
+      // 执行setup函数之前，设置当前组件实例
+      setCurrentInstance(instance)
       const setupResult = setup(shallowReadonly(instance.props), setupContext)
+      // 在setup函数执行完后，重置当前组件实例
+      setCurrentInstance(null)
       let setupState = {}
       if (typeof setupResult === 'function') {
         if (render) console.error('setup 函数返回渲染函数, render选项将被忽略')
@@ -220,6 +235,8 @@
           instance.isMounted = true
           // mounted
           mounted && mounted.call(renderContext)
+          // 遍历instance.mounted 数组
+          instance.mounted && instance.mounted.forEach(hook => hook.call(renderContext))
         } else {
           // beforeUpdate
           beforeUpdate && beforeUpdate.call(renderContext)
