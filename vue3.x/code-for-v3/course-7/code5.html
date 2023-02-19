@@ -119,7 +119,7 @@
     const { advanceBy, advanceSpaces } = context
     const props = []
 
-    while(
+    while (
       !context.source.startsWith('>') &&
       !context.source.startsWith('/>')
     ) {
@@ -135,7 +135,7 @@
 
       const quote = context.source[0]
       const isQuote = (quote === '"' || quote === "'")
-      
+
       if (isQuote) {
         advanceBy(1) // "
         const endQuoteIndex = context.source.indexOf(quote)
@@ -175,7 +175,7 @@
       }
     }
   }
-  function parseCDATA(context, ancestors) {}
+  function parseCDATA(context, ancestors) { }
   function parseComment(context) {
     let closeIndex = 0
     context.advanceBy('<!--'.length)
@@ -226,7 +226,7 @@
     "lt;": "<",
     "ltcc;": "⪦"
   }
-  
+
   function decodeHtml(rawText, asAttr = false) {
     let offset = 0
     const end = rawText.length
